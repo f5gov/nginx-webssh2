@@ -1,0 +1,89 @@
+# NGINX Configuration for WebSSH2 with FIPS Support
+# This file is processed by envsubst to replace environment variables
+
+user nginx;
+worker_processes ${NGINX_WORKER_PROCESSES};
+
+error_log /var/log/nginx/error.log ${NGINX_ERROR_LOG_LEVEL};
+pid /run/nginx.pid;
+
+# Load dynamic modules
+include /usr/share/nginx/modules/*.conf;
+
+events {
+    worker_connections ${NGINX_WORKER_CONNECTIONS};
+    use epoll;
+    multi_accept on;
+}
+
+http {
+    # Basic settings
+    sendfile on;
+    tcp_nopush on;
+    tcp_nodelay on;
+    keepalive_timeout ${NGINX_KEEPALIVE_TIMEOUT};
+    types_hash_max_size 2048;
+    server_tokens off;
+    
+    # Client settings
+    client_max_body_size ${NGINX_CLIENT_MAX_BODY_SIZE};
+    client_body_timeout 12;
+    client_header_timeout 12;
+    
+    # MIME types
+    include /etc/nginx/mime.types;
+    default_type application/octet-stream;
+
+    # Logging format with real IP
+    log_format main '$remote_addr - $remote_user [$time_local] "$request" '
+                    '$status $body_bytes_sent "$http_referer" '
+                    '"$http_user_agent" "$http_x_forwarded_for" '
+                    'rt=$request_time uct="$upstream_connect_time" '
+                    'uht="$upstream_header_time" urt="$upstream_response_time"';
+
+    # Access logging (can be disabled via env var)
+    access_log /var/log/nginx/access.log main;
+
+    # Gzip compression
+    gzip ${NGINX_GZIP};
+    gzip_vary on;
+    gzip_proxied any;
+    gzip_comp_level 6;
+    gzip_types
+        text/plain
+        text/css
+        text/xml
+        text/javascript
+        application/json
+        application/javascript
+        application/xml+rss
+        application/atom+xml
+        image/svg+xml;
+
+    # Rate limiting zones
+    limit_req_zone $binary_remote_addr zone=general:10m rate=${NGINX_RATE_LIMIT};
+    limit_req_zone $binary_remote_addr zone=websocket:10m rate=5r/s;
+    limit_conn_zone $binary_remote_addr zone=conn_limit_per_ip:10m;
+
+    # Real IP configuration (for proxy environments)
+    set_real_ip_from 10.0.0.0/8;
+    set_real_ip_from 172.16.0.0/12;
+    set_real_ip_from 192.168.0.0/16;
+    real_ip_header X-Forwarded-For;
+    real_ip_recursive on;
+
+    # WebSocket upgrade headers map
+    map $http_upgrade $connection_upgrade {
+        default upgrade;
+        '' close;
+    }
+
+    # Include FIPS cipher configuration
+    include /etc/nginx/snippets/ssl-params.conf;
+
+    # Include security headers
+    include /etc/nginx/snippets/security-headers.conf;
+
+    # Include server configurations
+    include /etc/nginx/conf.d/*.conf;
+}

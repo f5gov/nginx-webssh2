@@ -1,0 +1,4 @@
+[submodule "webssh2"]
+	path = webssh2
+	url = https://github.com/billchurch/webssh2.git
+	branch = newmain

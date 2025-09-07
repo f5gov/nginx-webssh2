@@ -1,0 +1,72 @@
+# Environment files
+.env
+.env.local
+.env.production
+.env.staging
+
+# Docker
+docker-compose.override.yml
+.docker/
+
+# Certificates and keys
+*.pem
+*.key
+*.crt
+*.csr
+*.p12
+*.pfx
+certs/
+ca-certs/
+
+# Logs
+*.log
+logs/
+nginx-logs/
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Node.js (if developing locally)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Docker volumes
+data/
+volumes/
+
+# Test results
+test-results/
+coverage/
+
+# Backup files
+*.bak
+*.backup
+
+# Configuration overrides
+config-override/
+custom-config/
+
+# Documentation build
+docs/_build/
+site/

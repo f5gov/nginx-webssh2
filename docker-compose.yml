@@ -1,0 +1,152 @@
+# Docker Compose for NGINX + WebSSH2 with FIPS Support
+# Development and testing configuration
+
+services:
+  nginx-webssh2:
+    build:
+      context: .  # Build from current directory with webssh2 as submodule
+      dockerfile: Dockerfile
+    image: nginx-webssh2:latest
+    container_name: nginx-webssh2
+    
+    # Ports
+    ports:
+      - "443:443"     # HTTPS only
+    
+    # Environment variables - customize as needed
+    environment:
+      # TLS Configuration
+      TLS_MODE: self-signed
+      TLS_PROTOCOLS: "TLSv1.2 TLSv1.3"
+      TLS_CIPHERS: "ECDHE-RSA-AES256-GCM-SHA384:ECDHE-RSA-AES128-GCM-SHA256:AES256-GCM-SHA384:AES128-GCM-SHA256"
+      TLS_CERT_CN: webssh2.localhost
+      TLS_CERT_SAN: "webssh2.localhost,localhost,127.0.0.1"
+      
+      # mTLS Configuration (disabled by default)
+      MTLS_ENABLED: "false"
+      # MTLS_CA_CERT: /etc/nginx/certs/ca.pem
+      # MTLS_VERIFY_DEPTH: 2
+      # MTLS_OPTIONAL: "false"
+      
+      # FIPS Configuration
+      FIPS_MODE: enabled
+      FIPS_CHECK: "false"  # Set to false for development
+      
+      # NGINX Configuration
+      NGINX_LISTEN_PORT: 443
+      NGINX_SERVER_NAME: webssh2.localhost
+      NGINX_WORKER_PROCESSES: 1
+      NGINX_WORKER_CONNECTIONS: 1024
+      NGINX_RATE_LIMIT: "10r/s"
+      NGINX_RATE_LIMIT_BURST: 20
+      NGINX_CONN_LIMIT: 100
+      NGINX_ACCESS_LOG: "off"
+      NGINX_ERROR_LOG_LEVEL: warn
+      
+      # Security Headers
+      SECURITY_HEADERS: "true"
+      HSTS_MAX_AGE: 31536000
+      CSP_POLICY: "default-src 'self'; script-src 'self' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; connect-src 'self' ws: wss:; font-src 'self'; img-src 'self' data:;"
+      
+      # WebSSH2 Core Configuration
+      WEBSSH2_LISTEN_IP: 127.0.0.1
+      WEBSSH2_LISTEN_PORT: 2222
+      
+      # WebSSH2 SSH Configuration
+      WEBSSH2_SSH_HOST: ""  # Leave empty for dynamic host selection
+      WEBSSH2_SSH_PORT: 22
+      WEBSSH2_SSH_TERM: xterm-256color
+      WEBSSH2_SSH_READY_TIMEOUT: 20000
+      WEBSSH2_SSH_KEEPALIVE_INTERVAL: 120000
+      WEBSSH2_SSH_KEEPALIVE_COUNT_MAX: 10
+      WEBSSH2_SSH_ALGORITHMS_PRESET: modern
+      
+      # WebSSH2 Session Configuration
+      WEBSSH2_SESSION_NAME: webssh2.sid
+      WEBSSH2_SESSION_SECRET: "your-secret-key-change-in-production"
+      
+      # WebSSH2 Header Configuration
+      WEBSSH2_HEADER_TEXT: "NGINX + WebSSH2 with FIPS"
+      WEBSSH2_HEADER_BACKGROUND: blue
+      
+      # WebSSH2 Options
+      WEBSSH2_OPTIONS_CHALLENGE_BUTTON: "true"
+      WEBSSH2_OPTIONS_AUTO_LOG: "false"
+      WEBSSH2_OPTIONS_ALLOW_REAUTH: "true"
+      WEBSSH2_OPTIONS_ALLOW_RECONNECT: "true"
+      WEBSSH2_OPTIONS_ALLOW_REPLAY: "true"
+      
+      # WebSSH2 CORS (allow localhost for development)
+      WEBSSH2_HTTP_ORIGINS: "https://webssh2.localhost:443,https://localhost:443,https://127.0.0.1:443"
+      
+      # Health Check Configuration
+      HEALTHCHECK_INTERVAL: 30
+      HEALTHCHECK_TIMEOUT: 5
+      HEALTHCHECK_RETRIES: 3
+    
+    # Volumes for persistent data (optional)
+    # Uncomment volumes below as needed
+    # volumes:
+      # Mount custom certificates
+      # - ./certs:/etc/nginx/certs:ro
+      # - ./ca-certs:/etc/nginx/ca-certs:ro
+      
+      # Persist generated certificates
+      # - nginx-webssh2-certs:/etc/nginx/certs
+      
+      # Persist logs
+      # - nginx-webssh2-logs:/var/log
+      
+      # Configuration override
+      # - ./config-override:/etc/nginx/conf.d/custom:ro
+    
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '1.0'
+        reservations:
+          memory: 256M
+          cpus: '0.5'
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/healthcheck.sh"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    
+    # Restart policy
+    restart: unless-stopped
+    
+    # Security options
+    security_opt:
+      - no-new-privileges:true
+    
+    # Read-only root filesystem (optional, for enhanced security)
+    # read_only: true
+    # tmpfs:
+    #   - /tmp:noexec,nosuid,size=100m
+    #   - /var/run:noexec,nosuid,size=100m
+    #   - /var/cache/nginx:noexec,nosuid,size=100m
+    
+    # Network configuration
+    networks:
+      - webssh2-network
+
+# Networks
+networks:
+  webssh2-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+# Volumes (uncomment if using persistent storage)
+# volumes:
+#   nginx-webssh2-certs:
+#     driver: local
+#   nginx-webssh2-logs:
+#     driver: local

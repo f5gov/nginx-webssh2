@@ -1,0 +1,77 @@
+# SystemD service unit for NGINX + WebSSH2 Pod (Pod-based approach)
+# Equivalent to docker-compose for RHEL/Podman deployment
+#
+# Installation:
+#   sudo cp nginx-webssh2-pod.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable nginx-webssh2-pod
+#   sudo systemctl start nginx-webssh2-pod
+#
+# Or for user service (rootless):
+#   mkdir -p ~/.config/systemd/user
+#   cp nginx-webssh2-pod.service ~/.config/systemd/user/
+#   systemctl --user daemon-reload
+#   systemctl --user enable nginx-webssh2-pod
+#   systemctl --user start nginx-webssh2-pod
+
+[Unit]
+Description=NGINX + WebSSH2 with FIPS Support (Pod)
+Documentation=https://github.com/billchurch/webssh2
+After=network-online.target firewalld.service
+Wants=network-online.target
+RequiresMountsFor=%t/containers
+
+[Service]
+Type=notify
+NotifyAccess=all
+
+# Environment
+Environment=PODMAN_SYSTEMD_UNIT=%n
+EnvironmentFile=-/opt/nginx-webssh2/nginx-webssh2.env
+EnvironmentFile=-/etc/nginx-webssh2/nginx-webssh2.env
+
+# Working directory
+WorkingDirectory=/opt/nginx-webssh2
+
+# User and group (use nginx user for better security)
+User=nginx
+Group=nginx
+
+# Podman commands
+ExecStartPre=/usr/bin/podman pod exists nginx-webssh2 || /usr/bin/podman pod create --name nginx-webssh2 --publish 443:443
+ExecStart=/usr/bin/podman play kube --replace --env-file nginx-webssh2.env nginx-webssh2-pod.yaml
+ExecStop=/usr/bin/podman pod stop --ignore --pod-id-file %t/containers/nginx-webssh2.pid -t 30
+ExecStopPost=/usr/bin/podman pod rm --ignore --pod-id-file %t/containers/nginx-webssh2.pid --force
+
+# Restart policy (equivalent to docker-compose restart: unless-stopped)
+Restart=unless-stopped
+RestartSec=30
+TimeoutStartSec=300
+TimeoutStopSec=60
+
+# Resource limits (equivalent to docker-compose deploy.resources)
+MemoryMax=512M
+CPUQuota=100%
+
+# Security settings
+NoNewPrivileges=yes
+ProtectHome=yes
+ProtectSystem=strict
+ReadWritePaths=/opt/nginx-webssh2 /var/log/nginx-webssh2 /tmp /var/tmp
+
+# Process management
+KillMode=mixed
+KillSignal=SIGTERM
+FinalKillSignal=SIGKILL
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=nginx-webssh2-pod
+
+[Install]
+WantedBy=multi-user.target
+
+# Health check integration (optional)
+# Requires systemd 248+ for ExecCondition
+# ExecCondition=/usr/bin/podman exec nginx-webssh2-nginx-webssh2 /usr/local/bin/healthcheck.sh

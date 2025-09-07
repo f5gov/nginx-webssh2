@@ -1,0 +1,20 @@
+#!/bin/bash
+
+# WebSSH2 service script for s6-overlay
+cd /usr/src/webssh2
+
+# Source environment variables created by initialization script
+if [[ -f /etc/webssh2-env ]]; then
+    source /etc/webssh2-env
+fi
+
+# Collect all WEBSSH2_ environment variables for explicit passing
+webssh2_env_vars=()
+while IFS='=' read -r -d '' name value; do
+    if [[ "$name" == WEBSSH2_* ]]; then
+        webssh2_env_vars+=("$name=$value")
+    fi
+done < <(env -z)
+
+# Run as webssh2 user with explicit environment variable passing
+exec s6-setuidgid webssh2 env "${webssh2_env_vars[@]}" node index.js
