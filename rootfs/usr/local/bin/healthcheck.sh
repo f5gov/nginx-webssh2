@@ -73,7 +73,7 @@ check_nginx_https() {
     fi
     
     # Check main application endpoint
-    if curl -f -s -k -m $timeout "https://localhost:${NGINX_PORT}/" > /dev/null 2>&1; then
+    if curl -f -s -k -m $timeout "https://localhost:${NGINX_PORT}/ssh/" > /dev/null 2>&1; then
         add_message "OK" "WebSSH2 application accessible via NGINX"
     else
         add_message "WARNING" "WebSSH2 application not accessible via NGINX"

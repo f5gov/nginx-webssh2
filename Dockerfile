@@ -2,13 +2,23 @@
 # Base: Red Hat UBI8 Minimal with Node.js 22, NGINX, and s6-overlay
 FROM registry.access.redhat.com/ubi8/ubi-minimal:latest
 
+# Build arguments
+ARG BUILD_DATE
+ARG BUILD_VERSION
+ARG WEBSSH2_VERSION
+ARG VCS_REF
+
 # Metadata
-LABEL maintainer="WebSSH2 Team" \
+LABEL maintainer="F5 Government Solutions Team" \
       name="nginx-webssh2" \
-      version="1.0.0" \
-      description="Production-ready NGINX + WebSSH2 container with FIPS 140-2 support" \
-      vendor="WebSSH2" \
-      license="MIT"
+      version="${BUILD_VERSION:-1.0.0}" \
+      description="NGINX + WebSSH2 container with FIPS 140-2 support" \
+      vendor="F5 Government Solutions" \
+      license="MIT" \
+      org.opencontainers.image.created="${BUILD_DATE}" \
+      org.opencontainers.image.version="${BUILD_VERSION}" \
+      org.opencontainers.image.revision="${VCS_REF}" \
+      webssh2.version="${WEBSSH2_VERSION}"
 
 # Set environment variables
 ENV S6_OVERLAY_VERSION=3.1.6.2 \
@@ -69,10 +79,21 @@ RUN curl -fsSL https://rpm.nodesource.com/setup_22.x | bash - && \
     microdnf clean all
 
 # Install s6-overlay for process supervision
-ADD https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-noarch.tar.xz /tmp/
-ADD https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-x86_64.tar.xz /tmp/
-RUN tar -C / -Jxpf /tmp/s6-overlay-noarch.tar.xz && \
-    tar -C / -Jxpf /tmp/s6-overlay-x86_64.tar.xz && \
+# Determine architecture and download appropriate binary
+RUN ARCH=$(uname -m) && \
+    if [ "$ARCH" = "x86_64" ]; then \
+        S6_ARCH="x86_64"; \
+    elif [ "$ARCH" = "aarch64" ]; then \
+        S6_ARCH="aarch64"; \
+    else \
+        echo "Unsupported architecture: $ARCH" && exit 1; \
+    fi && \
+    curl -L -o /tmp/s6-overlay-noarch.tar.xz \
+        https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-noarch.tar.xz && \
+    curl -L -o /tmp/s6-overlay-${S6_ARCH}.tar.xz \
+        https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-${S6_ARCH}.tar.xz && \
+    tar -C / -Jxpf /tmp/s6-overlay-noarch.tar.xz && \
+    tar -C / -Jxpf /tmp/s6-overlay-${S6_ARCH}.tar.xz && \
     rm /tmp/s6-overlay-*.tar.xz
 
 # Create users and groups
@@ -92,11 +113,10 @@ RUN mkdir -p \
     chown -R webssh2:webssh2 /usr/src/webssh2 /var/log/webssh2
 
 # Copy WebSSH2 application from submodule
-COPY webssh2/app/package*.json /usr/src/webssh2/
-COPY webssh2/app/index.js /usr/src/webssh2/
-COPY webssh2/app/client/ /usr/src/webssh2/client/
-COPY webssh2/app/server/ /usr/src/webssh2/server/
-COPY webssh2/app/scripts/ /usr/src/webssh2/scripts/
+COPY webssh2/package*.json /usr/src/webssh2/
+COPY webssh2/index.js /usr/src/webssh2/
+COPY webssh2/app/ /usr/src/webssh2/app/
+COPY webssh2/config.json.sample /usr/src/webssh2/
 
 # Install WebSSH2 dependencies as webssh2 user
 USER webssh2
