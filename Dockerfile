@@ -113,10 +113,10 @@ RUN mkdir -p \
     chown -R webssh2:webssh2 /usr/src/webssh2 /var/log/webssh2
 
 # Copy WebSSH2 application from submodule
-COPY webssh2/package*.json /usr/src/webssh2/
-COPY webssh2/index.js /usr/src/webssh2/
-COPY webssh2/app/ /usr/src/webssh2/app/
-COPY webssh2/config.json.sample /usr/src/webssh2/
+COPY ./webssh2/package*.json /usr/src/webssh2/
+COPY ./webssh2/index.js /usr/src/webssh2/
+COPY ./webssh2/app/ /usr/src/webssh2/app/
+COPY ./webssh2/config.json.sample /usr/src/webssh2/
 
 # Install WebSSH2 dependencies as webssh2 user
 USER webssh2
@@ -128,7 +128,7 @@ RUN npm ci --only=production --no-audit --no-fund && \
 USER root
 
 # Copy s6-overlay configuration
-COPY rootfs/ /
+COPY ./rootfs/ /
 
 # Set executable permissions on scripts
 RUN find /etc/cont-init.d -name "*.sh" -exec chmod +x {} \; && \

@@ -34,6 +34,8 @@ jobs:
       packages: write
       # attestations: write  # Uncomment when attestation is re-enabled
       id-token: write
+    outputs:
+      primary-tag: ${{ steps.determine-tag.outputs.primary-tag }}
     
     steps:
       - name: Checkout repository with submodules
@@ -92,6 +94,8 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
+            # Always set main tag for main branch
+            type=raw,value=main,enable=${{ github.ref == 'refs/heads/main' }}
             # Set latest tag for main branch (only if not prerelease)
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' && steps.webssh2-version.outputs.is_prerelease == 'false' }}
             # Set alpha/beta tag for prerelease versions
@@ -142,6 +146,27 @@ jobs:
       #     subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
       #     subject-digest: ${{ steps.build.outputs.digest }}
       #     push-to-registry: true
+      
+      - name: Determine primary tag for scanning
+        id: determine-tag
+        if: github.event_name != 'pull_request'
+        run: |
+          # Determine the primary tag based on version and branch
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            if [[ "${{ steps.webssh2-version.outputs.is_prerelease }}" == "true" ]]; then
+              # For prerelease on main, use the prerelease tag (e.g., 'alpha', 'beta')
+              PRIMARY_TAG="${{ steps.webssh2-version.outputs.prerelease }}"
+            else
+              # For stable release on main, use 'latest'
+              PRIMARY_TAG="latest"
+            fi
+          else
+            # For non-main branches, use the version tag
+            PRIMARY_TAG="${{ steps.webssh2-version.outputs.version }}"
+          fi
+          
+          echo "Primary tag for scanning: $PRIMARY_TAG"
+          echo "primary-tag=$PRIMARY_TAG" >> $GITHUB_OUTPUT
 
   vulnerability-scan:
     needs: build-and-push
@@ -156,7 +181,7 @@ jobs:
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.build-and-push.outputs.primary-tag }}
           format: 'sarif'
           output: 'trivy-results.sarif'
       

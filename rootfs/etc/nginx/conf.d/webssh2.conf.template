@@ -36,6 +36,9 @@ server {
     
     # Main WebSSH2 application
     location / {
+        # Enable access logging for main application
+        access_log /var/log/nginx/access.log main;
+        
         # Rate limiting for regular requests
         limit_req zone=general burst=${NGINX_RATE_LIMIT_BURST} nodelay;
         
@@ -68,6 +71,9 @@ server {
     
     # Socket.IO endpoint with separate rate limiting
     location /socket.io/ {
+        # Enable access logging for WebSocket connections
+        access_log /var/log/nginx/access.log main;
+        
         # More lenient rate limiting for WebSocket connections
         limit_req zone=websocket burst=10 nodelay;
         
@@ -102,6 +108,9 @@ server {
     
     # SSH WebSocket endpoint (if using separate path)
     location /ssh {
+        # Enable access logging for SSH WebSocket connections
+        access_log /var/log/nginx/access.log main;
+        
         # WebSocket-specific rate limiting
         limit_req zone=websocket burst=5 nodelay;
         
