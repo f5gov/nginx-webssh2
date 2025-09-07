@@ -1,0 +1,164 @@
+# WebSSH2 Server Configuration with TLS and WebSocket Support
+
+# Upstream backend for WebSSH2
+upstream webssh2_backend {
+    server 127.0.0.1:${WEBSSH2_LISTEN_PORT} max_fails=3 fail_timeout=30s;
+    keepalive 32;
+    keepalive_requests 1000;
+    keepalive_timeout 60s;
+}
+
+# HTTPS server - main WebSSH2 service (HTTPS only, no HTTP redirect)
+server {
+    listen ${NGINX_LISTEN_PORT} ssl http2 default_server;
+    listen [::]:${NGINX_LISTEN_PORT} ssl http2 default_server;
+    server_name ${NGINX_SERVER_NAME};
+    
+    # SSL certificate configuration (populated by init script)
+    ssl_certificate ${TLS_CERT_PATH};
+    ssl_certificate_key ${TLS_KEY_PATH};
+    
+    # Include SSL parameters
+    include /etc/nginx/snippets/ssl-params.conf;
+    
+    # Include mTLS configuration if enabled
+    include /etc/nginx/snippets/mtls.conf;
+    
+    # Rate limiting
+    limit_req zone=general burst=${NGINX_RATE_LIMIT_BURST} nodelay;
+    limit_conn conn_limit_per_ip ${NGINX_CONN_LIMIT};
+    
+    # Proxy timeouts for long-running SSH sessions
+    proxy_connect_timeout 4s;
+    proxy_send_timeout ${NGINX_PROXY_SEND_TIMEOUT};
+    proxy_read_timeout ${NGINX_PROXY_READ_TIMEOUT};
+    
+    # Main WebSSH2 application
+    location / {
+        # Rate limiting for regular requests
+        limit_req zone=general burst=${NGINX_RATE_LIMIT_BURST} nodelay;
+        
+        proxy_pass http://webssh2_backend;
+        proxy_http_version 1.1;
+        
+        # Standard proxy headers
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header X-Forwarded-Port $server_port;
+        
+        # WebSocket support
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+        
+        # Disable buffering for real-time communication
+        proxy_buffering off;
+        proxy_cache off;
+        
+        # Security headers
+        proxy_hide_header X-Powered-By;
+        
+        # Custom headers for WebSSH2
+        proxy_set_header X-WebSSH2-Real-IP $remote_addr;
+        proxy_set_header X-WebSSH2-Forwarded-Proto $scheme;
+    }
+    
+    # Socket.IO endpoint with separate rate limiting
+    location /socket.io/ {
+        # More lenient rate limiting for WebSocket connections
+        limit_req zone=websocket burst=10 nodelay;
+        
+        proxy_pass http://webssh2_backend;
+        proxy_http_version 1.1;
+        
+        # WebSocket headers
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+        
+        # Standard proxy headers
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header X-Forwarded-Port $server_port;
+        
+        # WebSocket-specific settings
+        proxy_buffering off;
+        proxy_cache off;
+        proxy_request_buffering off;
+        
+        # Extended timeouts for WebSocket connections
+        proxy_connect_timeout 4s;
+        proxy_send_timeout ${NGINX_PROXY_SEND_TIMEOUT};
+        proxy_read_timeout ${NGINX_PROXY_READ_TIMEOUT};
+        
+        # Allow frames for Socket.IO
+        proxy_set_header X-Frame-Options "";
+    }
+    
+    # SSH WebSocket endpoint (if using separate path)
+    location /ssh {
+        # WebSocket-specific rate limiting
+        limit_req zone=websocket burst=5 nodelay;
+        
+        proxy_pass http://webssh2_backend;
+        proxy_http_version 1.1;
+        
+        # WebSocket headers
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+        
+        # Standard proxy headers
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        
+        # WebSocket-specific settings
+        proxy_buffering off;
+        proxy_cache off;
+        proxy_request_buffering off;
+        
+        # Long timeouts for SSH sessions
+        proxy_connect_timeout 10s;
+        proxy_send_timeout ${NGINX_PROXY_SEND_TIMEOUT};
+        proxy_read_timeout ${NGINX_PROXY_READ_TIMEOUT};
+        
+        # Allow frames for SSH terminal
+        proxy_set_header X-Frame-Options "";
+    }
+    
+    # Health check endpoint (HTTPS)
+    location /health {
+        access_log off;
+        return 200 "healthy\n";
+        add_header Content-Type text/plain;
+    }
+    
+    # Internal health check for container orchestration
+    location /nginx-health {
+        access_log off;
+        return 200 "nginx healthy\n";
+        add_header Content-Type text/plain;
+        allow 127.0.0.1;
+        allow ::1;
+        deny all;
+    }
+    
+    # Deny access to hidden files
+    location ~ /\. {
+        deny all;
+        access_log off;
+        log_not_found off;
+    }
+    
+    # Security hardening - deny access to common sensitive files
+    location ~* \.(conf|config|bak|backup|swp|tmp)$ {
+        deny all;
+        access_log off;
+        log_not_found off;
+    }
+}

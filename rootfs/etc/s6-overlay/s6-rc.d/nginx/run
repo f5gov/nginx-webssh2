@@ -1,0 +1,4 @@
+#!/bin/bash
+
+# NGINX service script for s6-overlay
+exec nginx -g 'daemon off;'

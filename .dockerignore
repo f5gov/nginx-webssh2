@@ -1,0 +1,80 @@
+# Documentation
+README.md
+*.md
+docs/
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Environment files
+.env*
+!.env.example
+
+# Docker files
+docker-compose*.yml
+Dockerfile*
+.dockerignore
+
+# IDE and editor files
+.vscode/
+.idea/
+*.sublime-*
+*~
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+ehthumbs.db
+
+# Logs
+*.log
+logs/
+nginx-logs/
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.backup
+
+# Test files
+tests/
+test-results/
+coverage/
+
+# Development files
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+
+# Build artifacts
+dist/
+build/
+
+# Certificates (should be mounted at runtime)
+*.pem
+*.key
+*.crt
+*.csr
+certs/
+ca-certs/
+
+# Data directories
+data/
+volumes/
+
+# Configuration overrides
+config-override/
+custom-config/
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+.travis.yml
+circle.yml

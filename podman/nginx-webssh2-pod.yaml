@@ -1,0 +1,267 @@
+# Podman Kube YAML for NGINX + WebSSH2 with FIPS Support
+# Equivalent to docker-compose.yml for standalone RHEL deployment
+#
+# Usage:
+#   podman play kube nginx-webssh2-pod.yaml
+#
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx-webssh2
+  labels:
+    app: nginx-webssh2
+    version: latest
+  annotations:
+    # Resource limits equivalent to docker-compose deploy section
+    io.podman.memory-limit: "512Mi"
+    io.podman.cpu-limit: "1.0"
+    io.podman.memory-reservation: "256Mi"
+    io.podman.cpu-reservation: "0.5"
+spec:
+  # Security context - equivalent to docker-compose security_opt
+  securityContext:
+    runAsNonRoot: false  # Container handles user switching internally
+    fsGroup: 1001
+    # FIPS mode and security settings
+    seccompProfile:
+      type: RuntimeDefault
+  
+  # Restart policy equivalent to docker-compose restart: unless-stopped
+  restartPolicy: Always
+  
+  containers:
+  - name: nginx-webssh2
+    image: localhost/nginx-webssh2:latest
+    
+    # Ports - HTTPS only (equivalent to docker-compose ports)
+    ports:
+    - containerPort: 443
+      hostPort: 443
+      protocol: TCP
+    
+    # Environment variables - matching docker-compose environment section
+    env:
+    # TLS Configuration
+    - name: TLS_MODE
+      value: "self-signed"
+    - name: TLS_PROTOCOLS
+      value: "TLSv1.2 TLSv1.3"
+    - name: TLS_CIPHERS
+      value: "ECDHE-RSA-AES256-GCM-SHA384:ECDHE-RSA-AES128-GCM-SHA256:AES256-GCM-SHA384:AES128-GCM-SHA256"
+    - name: TLS_CERT_CN
+      value: "webssh2.localhost"
+    - name: TLS_CERT_SAN
+      value: "webssh2.localhost,localhost,127.0.0.1"
+    
+    # mTLS Configuration (disabled by default)
+    - name: MTLS_ENABLED
+      value: "false"
+    
+    # FIPS Configuration
+    - name: FIPS_MODE
+      value: "enabled"
+    - name: FIPS_CHECK
+      value: "false"  # Set to false for development
+    
+    # NGINX Configuration
+    - name: NGINX_LISTEN_PORT
+      value: "443"
+    - name: NGINX_SERVER_NAME
+      value: "webssh2.localhost"
+    - name: NGINX_WORKER_PROCESSES
+      value: "1"
+    - name: NGINX_WORKER_CONNECTIONS
+      value: "1024"
+    - name: NGINX_RATE_LIMIT
+      value: "10r/s"
+    - name: NGINX_RATE_LIMIT_BURST
+      value: "20"
+    - name: NGINX_CONN_LIMIT
+      value: "100"
+    - name: NGINX_ACCESS_LOG
+      value: "off"
+    - name: NGINX_ERROR_LOG_LEVEL
+      value: "warn"
+    
+    # Security Headers
+    - name: SECURITY_HEADERS
+      value: "true"
+    - name: HSTS_MAX_AGE
+      value: "31536000"
+    - name: CSP_POLICY
+      value: "default-src 'self'; script-src 'self' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; connect-src 'self' ws: wss:; font-src 'self'; img-src 'self' data:;"
+    
+    # WebSSH2 Core Configuration
+    - name: WEBSSH2_LISTEN_IP
+      value: "127.0.0.1"
+    - name: WEBSSH2_LISTEN_PORT
+      value: "2222"
+    
+    # WebSSH2 SSH Configuration
+    - name: WEBSSH2_SSH_HOST
+      value: ""  # Leave empty for dynamic host selection
+    - name: WEBSSH2_SSH_PORT
+      value: "22"
+    - name: WEBSSH2_SSH_TERM
+      value: "xterm-256color"
+    - name: WEBSSH2_SSH_READY_TIMEOUT
+      value: "20000"
+    - name: WEBSSH2_SSH_KEEPALIVE_INTERVAL
+      value: "120000"
+    - name: WEBSSH2_SSH_KEEPALIVE_COUNT_MAX
+      value: "10"
+    - name: WEBSSH2_SSH_ALGORITHMS_PRESET
+      value: "modern"
+    
+    # WebSSH2 Session Configuration
+    - name: WEBSSH2_SESSION_NAME
+      value: "webssh2.sid"
+    - name: WEBSSH2_SESSION_SECRET
+      value: "your-secret-key-change-in-production"
+    
+    # WebSSH2 Header Configuration
+    - name: WEBSSH2_HEADER_TEXT
+      value: "NGINX + WebSSH2 with FIPS"
+    - name: WEBSSH2_HEADER_BACKGROUND
+      value: "blue"
+    
+    # WebSSH2 Options
+    - name: WEBSSH2_OPTIONS_CHALLENGE_BUTTON
+      value: "true"
+    - name: WEBSSH2_OPTIONS_AUTO_LOG
+      value: "false"
+    - name: WEBSSH2_OPTIONS_ALLOW_REAUTH
+      value: "true"
+    - name: WEBSSH2_OPTIONS_ALLOW_RECONNECT
+      value: "true"
+    - name: WEBSSH2_OPTIONS_ALLOW_REPLAY
+      value: "true"
+    
+    # WebSSH2 CORS (allow localhost for development)
+    - name: WEBSSH2_HTTP_ORIGINS
+      value: "https://webssh2.localhost:443,https://localhost:443,https://127.0.0.1:443"
+    
+    # Health Check Configuration
+    - name: HEALTHCHECK_INTERVAL
+      value: "30"
+    - name: HEALTHCHECK_TIMEOUT
+      value: "5"
+    - name: HEALTHCHECK_RETRIES
+      value: "3"
+    
+    # Resource limits (equivalent to docker-compose deploy.resources)
+    resources:
+      limits:
+        memory: "512Mi"
+        cpu: "1000m"
+      requests:
+        memory: "256Mi"
+        cpu: "500m"
+    
+    # Security context for container (equivalent to docker-compose security_opt)
+    securityContext:
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+        - ALL
+      readOnlyRootFilesystem: false  # s6-overlay needs write access
+      runAsNonRoot: false  # Container handles user switching internally
+    
+    # Health check (equivalent to docker-compose healthcheck)
+    livenessProbe:
+      exec:
+        command:
+        - "/usr/local/bin/healthcheck.sh"
+      initialDelaySeconds: 30
+      periodSeconds: 30
+      timeoutSeconds: 10
+      failureThreshold: 3
+    
+    readinessProbe:
+      exec:
+        command:
+        - "/usr/local/bin/healthcheck.sh"
+      initialDelaySeconds: 10
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 3
+    
+    # Volume mounts (commented out by default, equivalent to docker-compose volumes)
+    volumeMounts:
+    # Mount custom certificates
+    # - name: certs
+    #   mountPath: /etc/nginx/certs
+    #   readOnly: true
+    # - name: ca-certs
+    #   mountPath: /etc/nginx/ca-certs
+    #   readOnly: true
+    
+    # Persist generated certificates
+    # - name: nginx-webssh2-certs
+    #   mountPath: /etc/nginx/certs
+    
+    # Persist logs
+    # - name: nginx-webssh2-logs
+    #   mountPath: /var/log
+    
+    # Configuration override
+    # - name: config-override
+    #   mountPath: /etc/nginx/conf.d/custom
+    #   readOnly: true
+  
+  # Volumes (commented out by default, uncomment as needed)
+  volumes:
+  # Mount custom certificates (equivalent to ./certs:/etc/nginx/certs:ro)
+  # - name: certs
+  #   hostPath:
+  #     path: ./certs
+  #     type: Directory
+  # - name: ca-certs
+  #   hostPath:
+  #     path: ./ca-certs
+  #     type: Directory
+  
+  # Persist generated certificates (equivalent to nginx-webssh2-certs volume)
+  # - name: nginx-webssh2-certs
+  #   persistentVolumeClaim:
+  #     claimName: nginx-webssh2-certs
+  
+  # Persist logs (equivalent to nginx-webssh2-logs volume)
+  # - name: nginx-webssh2-logs
+  #   persistentVolumeClaim:
+  #     claimName: nginx-webssh2-logs
+  
+  # Configuration override (equivalent to ./config-override:/etc/nginx/conf.d/custom:ro)
+  # - name: config-override
+  #   hostPath:
+  #     path: ./config-override
+  #     type: Directory
+  
+  # Host network mode alternative (equivalent to docker-compose network configuration)
+  # hostNetwork: false  # Uses pod network by default (bridge equivalent)
+
+---
+# Optional: Persistent Volume Claims for data persistence
+# Uncomment if using persistent volumes
+# apiVersion: v1
+# kind: PersistentVolumeClaim
+# metadata:
+#   name: nginx-webssh2-certs
+# spec:
+#   accessModes:
+#   - ReadWriteOnce
+#   resources:
+#     requests:
+#       storage: 1Gi
+#
+# ---
+# apiVersion: v1
+# kind: PersistentVolumeClaim
+# metadata:
+#   name: nginx-webssh2-logs
+# spec:
+#   accessModes:
+#   - ReadWriteOnce
+#   resources:
+#     requests:
+#       storage: 5Gi
