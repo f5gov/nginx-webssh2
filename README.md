@@ -2,6 +2,299 @@
 
 A production-ready Docker container combining NGINX and WebSSH2 with FIPS 140-2 compliance, built on Red Hat UBI8.
 
+## 📦 Installation
+
+### Docker
+
+```bash
+# Pull the latest alpha release
+docker pull ghcr.io/f5gov/nginx-webssh2:alpha
+
+# Run the container (basic setup with auto-generated session secret)
+docker run -d -p 443:443 --name nginx-webssh2 \
+  ghcr.io/f5gov/nginx-webssh2:alpha
+
+# Access WebSSH2 at https://localhost
+```
+
+### Podman
+
+```bash
+# Pull the latest alpha release
+podman pull ghcr.io/f5gov/nginx-webssh2:alpha
+
+# Run the container (basic setup with auto-generated session secret)
+podman run -d -p 443:443 --name nginx-webssh2 \
+  ghcr.io/f5gov/nginx-webssh2:alpha
+
+# Using podman-compose (same as docker-compose.yml)
+podman-compose up -d
+```
+
+### Available Tags
+
+- `main` - Latest build from main branch
+- `alpha` - Latest alpha release (current)
+- `latest` - Latest stable release (coming soon)
+- `v1.0.0`, `v1.0`, `v1` - Semantic versioning tags
+- `main-<sha>` - Commit-specific builds from main branch
+
+## ⚙️ Configuration
+
+### Essential Environment Variables
+
+```bash
+# Session Security (auto-generated if not provided)
+WEBSSH2_SESSION_SECRET=""    # Random 32-byte secret generated if empty
+                             # Set for production to persist sessions across restarts
+
+# SSH Connection
+WEBSSH2_SSH_HOST=""          # Empty for dynamic selection (default)
+WEBSSH2_SSH_PORT=22          # SSH port (default: 22)
+
+# Server Settings
+NGINX_SERVER_NAME=localhost  # Your server hostname
+NGINX_LISTEN_PORT=443        # HTTPS port (default: 443)
+```
+
+### TLS/SSL Configuration
+
+```bash
+# Certificate mode: self-signed (default), provided, letsencrypt
+TLS_MODE=self-signed
+
+# For self-signed certificates
+TLS_CERT_CN=webssh2.example.com
+TLS_CERT_SAN="webssh2.example.com,localhost,127.0.0.1"
+```
+
+#### Method 1: Volume Mount (Traditional)
+
+```bash
+TLS_MODE=provided
+TLS_CERT_PATH=/etc/nginx/certs/cert.pem
+TLS_KEY_PATH=/etc/nginx/certs/key.pem
+TLS_CHAIN_PATH=/etc/nginx/certs/chain.pem  # Optional certificate chain
+
+# Mount certificates when running container
+docker run -v /path/to/certs:/etc/nginx/certs:ro ...
+```
+
+#### Method 2: Environment Variables (Secrets Manager)
+
+```bash
+TLS_MODE=provided
+# Certificate content directly in environment
+TLS_CERT_CONTENT="-----BEGIN CERTIFICATE-----
+MIIDXTCCAkWgAwIBAgIJAK...
+-----END CERTIFICATE-----"
+TLS_KEY_CONTENT="-----BEGIN PRIVATE KEY-----
+MIIEvQIBADANBgkqhkiG9w0B...
+-----END PRIVATE KEY-----"
+TLS_CHAIN_CONTENT="-----BEGIN CERTIFICATE-----..."  # Optional chain
+```
+
+#### Method 3: Secrets Manager Integration Examples
+
+##### AWS Secrets Manager
+```bash
+# Fetch certificates from AWS Secrets Manager
+TLS_CERT_CONTENT=$(aws secretsmanager get-secret-value \
+  --secret-id prod/webssh2/tls-cert \
+  --query SecretString --output text)
+
+TLS_KEY_CONTENT=$(aws secretsmanager get-secret-value \
+  --secret-id prod/webssh2/tls-key \
+  --query SecretString --output text)
+
+docker run -d \
+  -e TLS_MODE=provided \
+  -e TLS_CERT_CONTENT="$TLS_CERT_CONTENT" \
+  -e TLS_KEY_CONTENT="$TLS_KEY_CONTENT" \
+  ghcr.io/f5gov/nginx-webssh2:alpha
+```
+
+##### HashiCorp Vault
+```bash
+# Fetch certificates from Vault
+export VAULT_ADDR="https://vault.example.com"
+TLS_CERT_CONTENT=$(vault kv get -field=cert secret/webssh2/tls)
+TLS_KEY_CONTENT=$(vault kv get -field=key secret/webssh2/tls)
+
+docker run -d \
+  -e TLS_MODE=provided \
+  -e TLS_CERT_CONTENT="$TLS_CERT_CONTENT" \
+  -e TLS_KEY_CONTENT="$TLS_KEY_CONTENT" \
+  ghcr.io/f5gov/nginx-webssh2:alpha
+```
+
+##### Azure Key Vault
+```bash
+# Fetch certificates from Azure Key Vault
+TLS_CERT_CONTENT=$(az keyvault secret show \
+  --vault-name MyKeyVault \
+  --name webssh2-tls-cert \
+  --query value -o tsv)
+
+TLS_KEY_CONTENT=$(az keyvault secret show \
+  --vault-name MyKeyVault \
+  --name webssh2-tls-key \
+  --query value -o tsv)
+
+docker run -d \
+  -e TLS_MODE=provided \
+  -e TLS_CERT_CONTENT="$TLS_CERT_CONTENT" \
+  -e TLS_KEY_CONTENT="$TLS_KEY_CONTENT" \
+  ghcr.io/f5gov/nginx-webssh2:alpha
+```
+
+##### 1Password CLI
+```bash
+# Fetch certificates from 1Password
+TLS_CERT_CONTENT=$(op item get "WebSSH2 TLS Certificate" --field cert)
+TLS_KEY_CONTENT=$(op item get "WebSSH2 TLS Certificate" --field key)
+
+docker run -d \
+  -e TLS_MODE=provided \
+  -e TLS_CERT_CONTENT="$TLS_CERT_CONTENT" \
+  -e TLS_KEY_CONTENT="$TLS_KEY_CONTENT" \
+  ghcr.io/f5gov/nginx-webssh2:alpha
+```
+
+#### Method 4: Docker/Kubernetes Native Secrets
+
+##### Docker Secrets (Swarm Mode)
+```bash
+# Create secrets
+echo "$CERT_CONTENT" | docker secret create webssh2-cert -
+echo "$KEY_CONTENT" | docker secret create webssh2-key -
+
+# Deploy with secrets mounted
+docker service create \
+  --secret source=webssh2-cert,target=/run/secrets/tls_cert \
+  --secret source=webssh2-key,target=/run/secrets/tls_key \
+  -e TLS_MODE=provided \
+  -e TLS_CERT_PATH=/run/secrets/tls_cert \
+  -e TLS_KEY_PATH=/run/secrets/tls_key \
+  ghcr.io/f5gov/nginx-webssh2:alpha
+```
+
+##### Kubernetes Secrets
+```yaml
+# Create secret
+kubectl create secret tls webssh2-tls \
+  --cert=path/to/cert.pem \
+  --key=path/to/key.pem
+
+# Use in deployment
+apiVersion: v1
+kind: Deployment
+spec:
+  template:
+    spec:
+      containers:
+      - name: nginx-webssh2
+        env:
+        - name: TLS_MODE
+          value: "provided"
+        - name: TLS_CERT_PATH
+          value: "/etc/tls/tls.crt"
+        - name: TLS_KEY_PATH
+          value: "/etc/tls/tls.key"
+        volumeMounts:
+        - name: tls-secret
+          mountPath: /etc/tls
+          readOnly: true
+      volumes:
+      - name: tls-secret
+        secret:
+          secretName: webssh2-tls
+```
+
+### Security Configuration
+
+```bash
+# FIPS Mode
+FIPS_MODE=enabled            # enabled or disabled
+FIPS_CHECK=true              # Strict FIPS validation
+
+# Mutual TLS (mTLS)
+MTLS_ENABLED=false           # Enable client certificates
+MTLS_CA_CERT=/etc/nginx/certs/ca.pem
+MTLS_VERIFY_DEPTH=2
+
+# Rate Limiting
+NGINX_RATE_LIMIT=10r/s       # Request rate limit
+NGINX_RATE_LIMIT_BURST=20    # Burst size
+NGINX_CONN_LIMIT=100         # Connection limit per IP
+```
+
+### WebSSH2 Configuration
+
+```bash
+# Interface and Port
+WEBSSH2_LISTEN_IP=127.0.0.1
+WEBSSH2_LISTEN_PORT=2222
+
+# SSH Settings
+WEBSSH2_SSH_TERM=xterm-256color
+WEBSSH2_SSH_ALGORITHMS_PRESET=modern
+WEBSSH2_SESSION_NAME=webssh2.sid
+
+# CORS Settings
+WEBSSH2_HTTP_ORIGINS=https://webssh2.example.com:443
+```
+
+For complete configuration options, see [`.env.example`](.env.example).
+
+## 🚀 Quick Start Examples
+
+### Basic Deployment (Development)
+
+```bash
+# Simplest setup - auto-generates session secret
+docker run -d -p 443:443 ghcr.io/f5gov/nginx-webssh2:alpha
+```
+
+### Production with Persistent Sessions
+
+```bash
+# Set explicit session secret for persistent sessions across restarts
+docker run -d -p 443:443 \
+  -e WEBSSH2_SESSION_SECRET="$(openssl rand -base64 32)" \
+  ghcr.io/f5gov/nginx-webssh2:alpha
+```
+
+### Production with Provided Certificates
+
+```bash
+# Using volume mounts
+docker run -d -p 443:443 \
+  -e WEBSSH2_SESSION_SECRET="your-persistent-secret-key" \
+  -e TLS_MODE=provided \
+  -e FIPS_MODE=enabled \
+  -v /path/to/certs:/etc/nginx/certs:ro \
+  ghcr.io/f5gov/nginx-webssh2:alpha
+
+# Using environment variables from secrets manager
+docker run -d -p 443:443 \
+  -e WEBSSH2_SESSION_SECRET="your-persistent-secret-key" \
+  -e TLS_MODE=provided \
+  -e TLS_CERT_CONTENT="$TLS_CERT_CONTENT" \
+  -e TLS_KEY_CONTENT="$TLS_KEY_CONTENT" \
+  -e FIPS_MODE=enabled \
+  ghcr.io/f5gov/nginx-webssh2:alpha
+```
+
+### With Specific SSH Target
+
+```bash
+docker run -d -p 443:443 \
+  -e WEBSSH2_SSH_HOST=ssh.example.com \
+  -e WEBSSH2_SSH_PORT=22 \
+  ghcr.io/f5gov/nginx-webssh2:alpha
+```
+
 ## 🏗️ Architecture
 
 ```ascii
@@ -41,265 +334,75 @@ A production-ready Docker container combining NGINX and WebSSH2 with FIPS 140-2 
 - **Compression**: Gzip compression for static assets
 - **Connection Pooling**: Efficient backend connection management
 
-### ⚙️ Configuration
+### ⚙️ Advanced Configuration
 
 - **Environment-Based**: Complete configuration via environment variables
 - **Hot Reloading**: Configuration updates without container restart
 - **Health Checks**: Comprehensive container and service health monitoring
 - **Logging**: Structured logging with configurable levels
 
-## 🚀 Quick Start
-
-### Using Pre-built Container from GitHub Container Registry
-
-```bash
-# Pull the latest image (no authentication required for public images)
-docker pull ghcr.io/f5gov/nginx-webssh2:latest
-
-# Run with default configuration
-docker run -d -p 443:443 --name nginx-webssh2 \
-  -e WEBSSH2_SESSION_SECRET="your-secret-key-change-in-production" \
-  ghcr.io/f5gov/nginx-webssh2:latest
-
-# Or use specific version
-docker pull ghcr.io/f5gov/nginx-webssh2:v1.0.0
-```
-
-### Building from Source
-
-#### Prerequisites
-
-- Docker and Docker Compose
-- Access to Red Hat container registry (registry.access.redhat.com)
-
-#### 1. Clone Repository with Submodules
-
-```bash
-git clone --recursive https://github.com/f5gov/nginx-webssh2.git
-cd nginx-webssh2
-
-# If you already cloned without submodules
-git submodule update --init --recursive
-```
-
-#### 2. Configure Environment
-
-```bash
-cp .env.example .env
-# Edit .env with your settings
-```
-
-#### 3. Build and Run
-
-```bash
-# Build using docker-compose
-docker-compose up --build
-
-# Or build manually
-docker build -t nginx-webssh2:latest .
-```
-
-#### 4. Access WebSSH2
-
-- **HTTPS**: <https://localhost> (will use self-signed certificate)
-- **Health Check**: <https://localhost/health>
-
-## 📁 Repository Structure
-
-```ascii
-nginx-webssh2/
-├── .github/
-│   └── workflows/
-│       └── publish.yml                    # GitHub Actions CI/CD workflow
-├── GITHUB_WORKFLOW.md                     # Detailed workflow documentation
-├── Dockerfile                              # Multi-stage container build
-├── docker-compose.yml                      # Development/testing compose
-├── .env.example                            # Environment configuration template
-├── README.md                              # This file
-├── .gitignore                             # Git ignore patterns
-├── .gitmodules                            # Submodule configuration (webssh2)
-├── webssh2/                               # WebSSH2 submodule (newmain branch)
-├── rootfs/                                # Container filesystem overlay
-│   ├── etc/
-│   │   ├── nginx/                         # NGINX configuration
-│   │   │   ├── nginx.conf.template        # Main NGINX config
-│   │   │   ├── conf.d/
-│   │   │   │   └── webssh2.conf.template  # WebSSH2 proxy config
-│   │   │   └── snippets/
-│   │   │       ├── ssl-params.conf        # SSL/TLS parameters
-│   │   │       ├── security-headers.conf   # Security headers
-│   │   │       └── mtls.conf.template     # mTLS configuration
-│   │   ├── s6-overlay/                    # Process supervision
-│   │   │   └── s6-rc.d/                   # Service definitions
-│   │   │       ├── nginx/                 # NGINX service
-│   │   │       └── webssh2/               # WebSSH2 service
-│   │   └── cont-init.d/                   # Initialization scripts
-│   │       ├── 10-check-fips.sh          # FIPS validation
-│   │       ├── 20-setup-tls.sh           # Certificate setup
-│   │       ├── 30-configure-nginx.sh     # NGINX configuration
-│   │       └── 40-configure-webssh2.sh   # WebSSH2 configuration
-│   └── usr/local/bin/                     # Utility scripts
-│       ├── generate-self-signed-cert.sh   # Certificate generation
-│       └── healthcheck.sh                 # Health check script
-└── tests/                                 # Test scripts
-    ├── test-fips.sh                      # FIPS compliance tests
-    ├── test-tls.sh                       # TLS configuration tests
-    └── test-websocket.sh                 # WebSocket connectivity tests
-```
-
-## ⚙️ Configuration Parameters
-
-### Environment Variables
-
-#### TLS Configuration
-
-```bash
-# Certificate mode: self-signed, provided, letsencrypt
-TLS_MODE=self-signed
-
-# Certificate paths (for provided mode)
-TLS_CERT_PATH=/etc/nginx/certs/cert.pem
-TLS_KEY_PATH=/etc/nginx/certs/key.pem
-
-# Or certificate content via environment
-TLS_CERT_CONTENT="-----BEGIN CERTIFICATE-----..."
-TLS_KEY_CONTENT="-----BEGIN PRIVATE KEY-----..."
-
-# TLS protocols and ciphers
-TLS_PROTOCOLS="TLSv1.2 TLSv1.3"
-TLS_CIPHERS="ECDHE-RSA-AES256-GCM-SHA384:ECDHE-RSA-AES128-GCM-SHA256"
-```
-
-#### mTLS Configuration
-
-```bash
-# Enable mutual TLS
-MTLS_ENABLED=true
-MTLS_CA_CERT=/etc/nginx/certs/ca.pem
-MTLS_VERIFY_DEPTH=2
-MTLS_OPTIONAL=false  # true for optional client certs
-```
-
-#### FIPS Configuration
-
-```bash
-# FIPS mode: enabled, disabled
-FIPS_MODE=enabled
-FIPS_CHECK=true  # Strict FIPS validation
-```
-
-#### NGINX Configuration
-
-```bash
-# Server settings
-NGINX_LISTEN_PORT=443
-NGINX_SERVER_NAME=webssh2.example.com
-NGINX_WORKER_PROCESSES=auto
-
-# Security settings
-NGINX_RATE_LIMIT=10r/s
-NGINX_RATE_LIMIT_BURST=20
-NGINX_CONN_LIMIT=100
-```
-
-#### WebSSH2 Configuration
-
-```bash
-# Core settings
-WEBSSH2_LISTEN_IP=127.0.0.1
-WEBSSH2_LISTEN_PORT=2222
-
-# SSH settings
-WEBSSH2_SSH_HOST=""  # Empty for dynamic selection
-WEBSSH2_SSH_PORT=22
-WEBSSH2_SSH_TERM=xterm-256color
-WEBSSH2_SSH_ALGORITHMS_PRESET=modern
-
-# Session security
-WEBSSH2_SESSION_SECRET="your-secret-key"
-WEBSSH2_SESSION_NAME=webssh2.sid
-```
-
-For complete configuration options, see [`.env.example`](.env.example).
-
-### Certificate Management
-
-#### Self-Signed Certificates
-
-```bash
-TLS_MODE=self-signed
-TLS_CERT_CN=webssh2.example.com
-TLS_CERT_SAN="webssh2.example.com,localhost,127.0.0.1"
-```
-
-#### Provided Certificates
-
-```bash
-TLS_MODE=provided
-
-# Method 1: File paths (via volume mount)
-TLS_CERT_PATH=/etc/nginx/certs/cert.pem
-TLS_KEY_PATH=/etc/nginx/certs/key.pem
-
-# Method 2: Environment variables
-TLS_CERT_CONTENT="-----BEGIN CERTIFICATE-----
-MIIDXTCCAkWgAwIBAgIJAK..."
-TLS_KEY_CONTENT="-----BEGIN PRIVATE KEY-----
-MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC..."
-```
-
-#### Let's Encrypt (Future)
-
-```bash
-TLS_MODE=letsencrypt
-TLS_ACME_EMAIL=admin@example.com
-TLS_ACME_STAGING=false
-```
-
 ## 🏃 Deployment
 
-### Production Deployment
-
-#### Docker Compose Production
+### Docker Compose
 
 ```yaml
 version: '3.8'
 
 services:
   nginx-webssh2:
-    image: nginx-webssh2:latest
+    image: ghcr.io/f5gov/nginx-webssh2:alpha
     ports:
       - "443:443"
     environment:
-      # Production security settings
+      WEBSSH2_SESSION_SECRET: "${SESSION_SECRET}"
       TLS_MODE: provided
       FIPS_MODE: enabled
-      FIPS_CHECK: true
-      MTLS_ENABLED: true
-      
-      # Performance settings
-      NGINX_WORKER_PROCESSES: auto
-      NGINX_RATE_LIMIT: 50r/s
-      NGINX_CONN_LIMIT: 500
-      
-      # Security
-      WEBSSH2_SESSION_SECRET: "${SESSION_SECRET}"
-      HSTS_MAX_AGE: 31536000
-      
     volumes:
       - ./certs:/etc/nginx/certs:ro
-      - ./ca-certs:/etc/nginx/ca-certs:ro
-      - nginx-logs:/var/log
-    
     restart: unless-stopped
-    security_opt:
-      - no-new-privileges:true
-
-volumes:
-  nginx-logs:
 ```
 
-#### Kubernetes Deployment
+### Podman Compose
+
+```yaml
+# podman-compose.yml - Same format as docker-compose.yml
+version: '3.8'
+
+services:
+  nginx-webssh2:
+    image: ghcr.io/f5gov/nginx-webssh2:alpha
+    ports:
+      - "443:443"
+    environment:
+      WEBSSH2_SESSION_SECRET: "${SESSION_SECRET}"
+      TLS_MODE: provided
+      FIPS_MODE: enabled
+    volumes:
+      - ./certs:/etc/nginx/certs:ro
+    restart: unless-stopped
+    security_opt:
+      - label=disable  # SELinux context for rootless podman
+```
+
+```bash
+# Install podman-compose if needed
+pip3 install podman-compose
+
+# Run with podman-compose
+podman-compose up -d
+
+# Or use podman play kube (generate from compose)
+podman-compose generate-kube > nginx-webssh2.yaml
+podman play kube nginx-webssh2.yaml
+
+# Systemd integration (rootless)
+podman generate systemd --new --name nginx-webssh2 \
+  > ~/.config/systemd/user/nginx-webssh2.service
+systemctl --user enable nginx-webssh2.service
+systemctl --user start nginx-webssh2.service
+```
+
+### Kubernetes
 
 ```yaml
 apiVersion: apps/v1
@@ -318,9 +421,47 @@ spec:
     spec:
       containers:
       - name: nginx-webssh2
-        image: nginx-webssh2:latest
+        image: ghcr.io/f5gov/nginx-webssh2:alpha
         ports:
         - containerPort: 443
+        env:
+        - name: WEBSSH2_SESSION_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: webssh2-secret
+              key: session-secret
+        livenessProbe:
+          exec:
+            command:
+            - /usr/local/bin/healthcheck.sh
+          initialDelaySeconds: 30
+          periodSeconds: 30
+```
+
+### OpenShift
+
+```yaml
+# Create OpenShift deployment with proper security context
+apiVersion: apps.openshift.io/v1
+kind: DeploymentConfig
+metadata:
+  name: nginx-webssh2
+  namespace: webssh2-project
+spec:
+  replicas: 3
+  selector:
+    app: nginx-webssh2
+  template:
+    metadata:
+      labels:
+        app: nginx-webssh2
+    spec:
+      containers:
+      - name: nginx-webssh2
+        image: ghcr.io/f5gov/nginx-webssh2:alpha
+        ports:
+        - containerPort: 443
+          protocol: TCP
         env:
         - name: TLS_MODE
           value: "provided"
@@ -344,7 +485,9 @@ spec:
             cpu: "500m"
         securityContext:
           allowPrivilegeEscalation: false
-          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
           runAsNonRoot: true
         livenessProbe:
           exec:
@@ -352,22 +495,155 @@ spec:
             - /usr/local/bin/healthcheck.sh
           initialDelaySeconds: 30
           periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 443
+            scheme: HTTPS
+          initialDelaySeconds: 10
+          periodSeconds: 10
       volumes:
       - name: tls-certs
         secret:
-          secretName: nginx-webssh2-tls
+          secretName: webssh2-tls
+      serviceAccountName: nginx-webssh2
+      securityContext:
+        fsGroup: 1001
+        supplementalGroups: [1001]
+---
+# Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-webssh2
+spec:
+  selector:
+    app: nginx-webssh2
+  ports:
+  - name: https
+    port: 443
+    targetPort: 443
+  type: ClusterIP
+---
+# Route with TLS termination
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: nginx-webssh2
+spec:
+  host: webssh2.apps.example.com
+  to:
+    kind: Service
+    name: nginx-webssh2
+  port:
+    targetPort: https
+  tls:
+    termination: passthrough
+    insecureEdgeTerminationPolicy: Redirect
 ```
 
-### Security Considerations
+#### OpenShift CLI Commands
 
-#### FIPS Compliance
+```bash
+# Create new project
+oc new-project webssh2-project
+
+# Create secrets
+oc create secret tls webssh2-tls \
+  --cert=path/to/cert.pem \
+  --key=path/to/key.pem
+
+oc create secret generic webssh2-secret \
+  --from-literal=session-secret="$(openssl rand -base64 32)"
+
+# Deploy using oc new-app
+oc new-app ghcr.io/f5gov/nginx-webssh2:alpha \
+  --name=nginx-webssh2 \
+  -e TLS_MODE=provided \
+  -e FIPS_MODE=enabled
+
+# Set security context constraints (if needed)
+oc adm policy add-scc-to-user anyuid -z default
+
+# Expose the service
+oc expose svc/nginx-webssh2 --port=443
+
+# Scale deployment
+oc scale --replicas=3 dc/nginx-webssh2
+```
+
+## 🔍 Monitoring & Health
+
+### Health Check Endpoint
+
+```bash
+# HTTPS health check
+curl -k https://localhost/health
+
+# Container health check
+docker exec nginx-webssh2 /usr/local/bin/healthcheck.sh
+```
+
+### Logging
+
+#### Enable Logging
+
+```bash
+# NGINX access logs are disabled by default for performance
+# To enable NGINX access logging:
+docker run -d -p 443:443 \
+  -e NGINX_ACCESS_LOG=on \
+  ghcr.io/f5gov/nginx-webssh2:alpha
+
+# To enable WebSSH2 debug logging:
+docker run -d -p 443:443 \
+  -e DEBUG="webssh2:*" \
+  ghcr.io/f5gov/nginx-webssh2:alpha
+
+# Or enable specific debug namespaces:
+# DEBUG="webssh2:socket,webssh2:ssh,webssh2:config"
+```
+
+#### View Logs
+
+```bash
+# View container logs (includes all service output)
+docker logs nginx-webssh2
+
+# NGINX error logs (always enabled)
+docker exec nginx-webssh2 tail -f /var/log/nginx/error.log
+
+# NGINX access logs (only when NGINX_ACCESS_LOG=on)
+docker exec nginx-webssh2 tail -f /var/log/nginx/access.log
+
+# WebSSH2 logs (debug output when DEBUG is set)
+docker exec nginx-webssh2 tail -f /var/log/webssh2/webssh2.log
+```
+
+#### Logging Configuration
+
+```bash
+# Environment variables for logging control
+NGINX_ACCESS_LOG=off         # 'on' or 'off' (default: off)
+NGINX_ERROR_LOG_LEVEL=warn   # debug, info, notice, warn, error, crit
+DEBUG=                       # WebSSH2 debug namespaces (empty = minimal logging)
+```
+
+## 🛠️ Building from Source
+
+For detailed build instructions, see [docs/BUILD.md](docs/BUILD.md).
+
+
+## 🔒 Security Considerations
+
+### FIPS Compliance
 
 - **Host Requirements**: Container must run on FIPS-enabled host for full compliance
 - **Kernel Support**: FIPS mode requires compatible host kernel
 - **Certificate Validation**: All certificates validated against FIPS standards
 - **Algorithm Restrictions**: Only FIPS-approved ciphers and protocols
 
-#### Network Security
+### Network Security
 
 ```bash
 # Restrict SSH access
@@ -381,7 +657,7 @@ MTLS_CA_CERT=/etc/nginx/certs/ca.pem
 WEBSSH2_HTTP_ORIGINS=https://webssh2.example.com:443
 ```
 
-#### Secrets Management
+### Secrets Management
 
 ```bash
 # Use Docker secrets or Kubernetes secrets
@@ -390,213 +666,38 @@ TLS_CERT_PATH=/run/secrets/tls_cert
 TLS_KEY_PATH=/run/secrets/tls_key
 ```
 
-## 🔍 Monitoring & Logging
-
-### Health Checks
-
-The container includes comprehensive health checks:
-
-```bash
-# Manual health check
-docker exec nginx-webssh2 /usr/local/bin/healthcheck.sh
-
-# Health check output
-=== Health Check Results ===
-[OK] NGINX process is running
-[OK] WebSSH2 process is running  
-[OK] NGINX HTTPS endpoint responding
-[OK] WebSSH2 listening on 127.0.0.1:2222
-[OK] TLS certificate is valid
-[OK] Disk usage: 45%
-[OK] Memory usage: 67%
-[OK] FIPS mode is enabled
-
-Overall Status: HEALTHY
-```
-
-### Logging
-
-#### Log Locations
-
-```bash
-# NGINX logs
-/var/log/nginx/access.log
-/var/log/nginx/error.log
-
-# WebSSH2 logs  
-/var/log/webssh2/webssh2.log
-
-# System logs
-/var/log/messages
-```
-
-#### Log Configuration
-
-```bash
-# NGINX logging
-NGINX_ACCESS_LOG=on
-NGINX_ERROR_LOG_LEVEL=warn
-
-# WebSSH2 debugging
-DEBUG=socket,ssh,config
-```
-
-#### Centralized Logging
-
-```yaml
-# Fluentd/ELK integration
-logging:
-  driver: fluentd
-  options:
-    fluentd-address: localhost:24224
-    tag: nginx-webssh2
-```
-
-## 🧪 Testing
-
-### Build and Test
-
-```bash
-# Build container
-docker build -t nginx-webssh2:test .
-
-# Run tests
-./tests/test-fips.sh
-./tests/test-tls.sh
-./tests/test-websocket.sh
-
-# Integration test
-docker-compose -f docker-compose.yml up --build -d
-curl -k https://localhost/health
-```
-
-### FIPS Validation
-
-```bash
-# Verify FIPS mode
-docker exec nginx-webssh2 cat /proc/sys/crypto/fips_enabled
-
-# Check OpenSSL FIPS
-docker exec nginx-webssh2 openssl version -a
-
-# Test cipher suites
-openssl s_client -connect localhost:443 -cipher 'FIPS'
-```
-
-### Load Testing
-
-```bash
-# WebSocket connections
-wscat -c wss://localhost/socket.io/?transport=websocket
-
-# HTTP load test
-ab -n 1000 -c 10 -k https://localhost/health
-```
-
-## 🛠️ Development
-
-### Local Development
-
-```bash
-# Clone repositories
-git clone https://github.com/billchurch/webssh2.git
-git clone https://github.com/your-org/nginx-webssh2.git
-
-# Build for development
-cd nginx-webssh2
-docker-compose up --build
-
-# Enable debugging
-echo "DEBUG=socket,ssh,config" >> .env
-docker-compose restart
-```
-
-### Custom Configuration
-
-```bash
-# Mount custom NGINX config
-volumes:
-  - ./custom-nginx.conf:/etc/nginx/conf.d/custom.conf:ro
-
-# Override WebSSH2 config
-volumes:
-  - ./custom-webssh2-config.json:/usr/src/webssh2/config.json:ro
-```
 
 ## 🤝 Contributing
 
-### Development Workflow
+See [docs/BUILD.md](docs/BUILD.md) for development setup and testing requirements.
 
-1. Fork the repository
-2. Create feature branch: `git checkout -b feature/new-feature`
-3. Make changes and test thoroughly
-4. Update documentation
-5. Submit pull request
+## 🚢 CI/CD & Container Registry
 
-### Testing Requirements
-
-- All tests must pass: `./tests/run-all-tests.sh`
-- FIPS compliance verified
-- Security scan clean: `docker scan nginx-webssh2:latest`
-- Performance benchmarks maintained
-
-## 🚢 Container Registry & CI/CD
-
-> 📖 **Full workflow documentation**: See [GITHUB_WORKFLOW.md](GITHUB_WORKFLOW.md) for detailed CI/CD setup and usage
-
-### GitHub Container Registry
-
-Pre-built images are available at `ghcr.io/f5gov/nginx-webssh2` with the following tags:
-
-- `latest` - Latest stable release from main branch
-- `v1.0.0`, `v1.0`, `v1` - Semantic versioning tags
-- `main-<sha>` - Commit-specific builds from main branch
-- `pr-<number>` - Pull request preview builds
+> 📖 **Full documentation**: See [GITHUB_WORKFLOW.md](GITHUB_WORKFLOW.md) for detailed CI/CD setup
 
 ### Multi-Architecture Support
 
-Images are built for multiple architectures:
-
+Images are built for:
 - `linux/amd64` - Intel/AMD 64-bit
 - `linux/arm64` - ARM 64-bit (Apple Silicon, AWS Graviton)
 
-### Automated Build Pipeline
+### Automated Pipeline
 
-Every push to main branch and tagged release triggers:
-
+Every push triggers:
 1. Multi-architecture Docker build
 2. Vulnerability scanning with Trivy
 3. Container attestation generation
 4. Automatic push to GitHub Container Registry
 
-### Using with Docker Compose
-
-```yaml
-services:
-  nginx-webssh2:
-    image: ghcr.io/f5gov/nginx-webssh2:latest
-    ports:
-      - "443:443"
-    environment:
-      WEBSSH2_SESSION_SECRET: "your-secret-key"
-      # Additional configuration...
-```
-
-## 📋 Changelog
-
-### v1.0.0
-
-- Initial release with UBI8 base
-- FIPS 140-2 compliance
-- mTLS support
-
-### Roadmap
+## 📋 Roadmap
 
 - [ ] Let's Encrypt integration
 - [ ] OAuth2/OIDC authentication
 - [ ] Prometheus metrics
 - [x] ARM64 support (multi-arch builds)
 - [x] GitHub Container Registry publishing
+- [x] FIPS 140-2 compliance
+- [x] mTLS support
 
 ## 🔗 References
 
