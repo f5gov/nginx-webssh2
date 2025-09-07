@@ -11,7 +11,7 @@ services:
     
     # Ports
     ports:
-      - "443:443"     # HTTPS only
+      - "8443:443"     # HTTPS only - host:container
     
     # Environment variables - customize as needed
     environment:

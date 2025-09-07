@@ -95,6 +95,15 @@ if [[ "${FIPS_MODE}" == "enabled" ]]; then
     echo "[NGINX] ✓ FIPS cipher suites configured"
 fi
 
+# Configure SSL stapling based on TLS_MODE
+if [[ "${TLS_MODE}" != "self-signed" ]]; then
+    echo "[NGINX] Enabling SSL stapling for non-self-signed certificate"
+    sed -i 's/^# ssl_stapling/ssl_stapling/' /etc/nginx/snippets/ssl-params.conf
+    sed -i 's/^# resolver /resolver /' /etc/nginx/snippets/ssl-params.conf
+else
+    echo "[NGINX] SSL stapling disabled for self-signed certificate"
+fi
+
 # Configure access logging
 if [[ "${NGINX_ACCESS_LOG}" == "off" ]]; then
     echo "[NGINX] Disabling access logs"
