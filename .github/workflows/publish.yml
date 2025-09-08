@@ -94,10 +94,10 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
+            # Always set latest tag for main branch
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
             # Always set main tag for main branch
             type=raw,value=main,enable=${{ github.ref == 'refs/heads/main' }}
-            # Set latest tag for main branch (only if not prerelease)
-            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' && steps.webssh2-version.outputs.is_prerelease == 'false' }}
             # Set alpha/beta tag for prerelease versions
             type=raw,value=${{ steps.webssh2-version.outputs.prerelease }},enable=${{ github.ref == 'refs/heads/main' && steps.webssh2-version.outputs.is_prerelease == 'true' }}
             # WebSSH2 version tags
@@ -153,13 +153,8 @@ jobs:
         run: |
           # Determine the primary tag based on version and branch
           if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
-            if [[ "${{ steps.webssh2-version.outputs.is_prerelease }}" == "true" ]]; then
-              # For prerelease on main, use the prerelease tag (e.g., 'alpha', 'beta')
-              PRIMARY_TAG="${{ steps.webssh2-version.outputs.prerelease }}"
-            else
-              # For stable release on main, use 'latest'
-              PRIMARY_TAG="latest"
-            fi
+            # Always use 'latest' for main branch since it's always set
+            PRIMARY_TAG="latest"
           else
             # For non-main branches, use the version tag
             PRIMARY_TAG="${{ steps.webssh2-version.outputs.version }}"
