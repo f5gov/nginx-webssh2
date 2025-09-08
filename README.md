@@ -7,12 +7,12 @@ A production-ready Docker container combining NGINX and WebSSH2 with FIPS 140-2 
 ### Docker
 
 ```bash
-# Pull the latest alpha release
-docker pull ghcr.io/f5gov/nginx-webssh2:alpha
+# Pull the latest release
+docker pull ghcr.io/f5gov/nginx-webssh2:latest
 
 # Run the container (basic setup with auto-generated session secret)
 docker run -d -p 443:443 --name nginx-webssh2 \
-  ghcr.io/f5gov/nginx-webssh2:alpha
+  ghcr.io/f5gov/nginx-webssh2:latest
 
 # Access WebSSH2 at https://localhost
 ```
@@ -20,12 +20,12 @@ docker run -d -p 443:443 --name nginx-webssh2 \
 ### Podman
 
 ```bash
-# Pull the latest alpha release
-podman pull ghcr.io/f5gov/nginx-webssh2:alpha
+# Pull the latest release
+podman pull ghcr.io/f5gov/nginx-webssh2:latest
 
 # Run the container (basic setup with auto-generated session secret)
 podman run -d -p 443:443 --name nginx-webssh2 \
-  ghcr.io/f5gov/nginx-webssh2:alpha
+  ghcr.io/f5gov/nginx-webssh2:latest
 
 # Using podman-compose (same as docker-compose.yml)
 podman-compose up -d
@@ -33,9 +33,9 @@ podman-compose up -d
 
 ### Available Tags
 
-- `main` - Latest build from main branch
-- `alpha` - Latest alpha release (current)
-- `latest` - Latest stable release (coming soon)
+- `latest` - Latest build from main branch (recommended)
+- `main` - Same as latest (alternate tag)
+- `alpha` - Alpha releases when version contains -alpha
 - `v1.0.0`, `v1.0`, `v1` - Semantic versioning tags
 - `main-<sha>` - Commit-specific builds from main branch
 
