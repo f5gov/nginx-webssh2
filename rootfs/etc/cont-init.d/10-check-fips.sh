@@ -49,16 +49,36 @@ if [[ "${FIPS_MODE}" == "enabled" ]]; then
     # Test OpenSSL FIPS capability
     if openssl version -a | grep -q "OPENSSLDIR"; then
         echo "[FIPS] ✓ OpenSSL is available"
+        OPENSSL_VERSION=$(openssl version | awk '{print $2}')
+        echo "[FIPS] OpenSSL version: ${OPENSSL_VERSION}"
         
-        # Check if OpenSSL was compiled with FIPS support
-        if openssl list -providers 2>/dev/null | grep -q "fips" || \
-           openssl version -a | grep -qi "fips"; then
-            echo "[FIPS] ✓ OpenSSL has FIPS support"
+        # Check for OpenSSL 3.0+ FIPS provider (UBI9)
+        if openssl list -providers 2>/dev/null | grep -q "fips"; then
+            echo "[FIPS] ✓ OpenSSL 3.0 FIPS provider detected"
+            
+            # Get detailed FIPS provider info
+            echo "[FIPS] Available providers:"
+            openssl list -providers 2>/dev/null | grep -E "^  name:|^    fips" | head -4
+            
+        # Fallback check for OpenSSL 1.1 FIPS module (UBI8)
+        elif openssl version -a | grep -qi "fips"; then
+            echo "[FIPS] ✓ OpenSSL 1.1 FIPS module detected"
         else
             echo "[FIPS] ⚠ OpenSSL FIPS support not detected"
             if [[ "${FIPS_CHECK}" == "true" ]]; then
                 echo "[FIPS] ERROR: OpenSSL without FIPS support"
+                echo "[FIPS] For UBI9: Ensure FIPS provider is available"
+                echo "[FIPS] For UBI8: Ensure FIPS module is compiled in"
                 exit 1
+            fi
+        fi
+        
+        # Verify FIPS configuration file for OpenSSL 3.0
+        if [[ -n "${OPENSSL_CONF}" && -f "${OPENSSL_CONF}" ]]; then
+            echo "[FIPS] ✓ OpenSSL configuration file: ${OPENSSL_CONF}"
+            # Check if FIPS is referenced in config
+            if grep -q "fips" "${OPENSSL_CONF}" 2>/dev/null; then
+                echo "[FIPS] ✓ FIPS configuration found in OpenSSL config"
             fi
         fi
     else

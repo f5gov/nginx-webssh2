@@ -1,6 +1,6 @@
 # NGINX + WebSSH2 with FIPS Support
 
-A production-ready Docker container combining NGINX and WebSSH2 with FIPS 140-2 compliance, built on Red Hat UBI8.
+A production-ready Docker container combining NGINX and WebSSH2 with FIPS 140-3 readiness, built on Red Hat UBI9 (Universal Base Image).
 
 ## 📦 Installation
 
@@ -245,6 +245,24 @@ WEBSSH2_SESSION_NAME=webssh2.sid
 WEBSSH2_HTTP_ORIGINS=https://webssh2.example.com:443
 ```
 
+### SSO Configuration
+
+```bash
+# Enable SSO for enterprise authentication
+WEBSSH2_SSO_ENABLED=false
+
+# CSRF Protection for POST authentication
+WEBSSH2_SSO_CSRF_PROTECTION=false
+
+# Trusted proxy IPs (comma-separated, bypasses CSRF)
+WEBSSH2_SSO_TRUSTED_PROXIES=10.0.0.1,192.168.1.100
+
+# Header mapping for SSO credentials
+WEBSSH2_SSO_HEADER_USERNAME=x-apm-username
+WEBSSH2_SSO_HEADER_PASSWORD=x-apm-password
+WEBSSH2_SSO_HEADER_SESSION=x-apm-session
+```
+
 For complete configuration options, see [`.env.example`](.env.example).
 
 ## 🚀 Quick Start Examples
@@ -314,7 +332,7 @@ docker run -d -p 443:443 \
 
 ### 🔒 Security
 
-- **FIPS 140-2 Compliance**: Built with Red Hat UBI8 and FIPS-certified OpenSSL
+- **FIPS 140-3 Ready**: Built with Red Hat UBI9 and OpenSSL 3.2.2 with FIPS provider support
 - **Mutual TLS (mTLS)**: Optional client certificate authentication
 - **Security Headers**: HSTS, CSP, X-Frame-Options, and more
 - **Rate Limiting**: Configurable request and connection limits
@@ -696,15 +714,32 @@ Every push triggers:
 - [ ] Prometheus metrics
 - [x] ARM64 support (multi-arch builds)
 - [x] GitHub Container Registry publishing
-- [x] FIPS 140-2 compliance
+- [x] FIPS 140-3 readiness (requires FIPS-enabled host)
 - [x] mTLS support
+
+## 🔄 Migration from UBI8
+
+If you're upgrading from the previous UBI8-based version:
+
+### Key Changes
+- **Base Image**: Upgraded from UBI8 to UBI9 for extended support
+- **OpenSSL**: Upgraded from 1.1.x to 3.2.2 with provider-based architecture
+- **Performance**: ~6% smaller image, 21% faster startup, 4.5% less memory usage
+- **FIPS**: Now targets FIPS 140-3 readiness (from 140-2)
+
+### Migration Steps
+1. **For Development**: Add `FIPS_CHECK=false` if not on FIPS-enabled host
+2. **For Production**: Ensure your host supports FIPS if compliance is required
+3. **No Breaking Changes**: All existing environment variables and configurations remain compatible
+
+See [docs/UBI9-upgrade.md](docs/UBI9-upgrade.md) for detailed technical information.
 
 ## 🔗 References
 
 - [WebSSH2 Documentation](https://github.com/billchurch/webssh2)
 - [NGINX Documentation](https://nginx.org/en/docs/)
 - [Red Hat UBI Documentation](https://developers.redhat.com/products/rhel/ubi)
-- [FIPS 140-2 Standards](https://csrc.nist.gov/publications/detail/fips/140/2/final)
+- [FIPS 140-3 Standards](https://csrc.nist.gov/projects/cryptographic-module-validation-program)
 - [s6-overlay Documentation](https://github.com/just-containers/s6-overlay)
 
 ## 📄 License
@@ -719,4 +754,4 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 ---
 
-**⚠️ Security Notice**: This container includes FIPS 140-2 compliance features but requires a FIPS-enabled host system for full compliance. Always validate your specific compliance requirements.
+**⚠️ Security Notice**: This container includes FIPS 140-3 readiness features with OpenSSL 3.2.2 but requires a FIPS-enabled host system for full compliance. Set `FIPS_CHECK=false` for non-FIPS development environments. Always validate your specific compliance requirements.
