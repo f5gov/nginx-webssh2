@@ -171,6 +171,7 @@ jobs:
       contents: read
       packages: read
       security-events: write
+      actions: read  # Required for workflow metadata access
     
     steps:
       - name: Run Trivy vulnerability scanner
@@ -179,8 +180,37 @@ jobs:
           image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.build-and-push.outputs.primary-tag }}
           format: 'sarif'
           output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH,MEDIUM'
+          exit-code: '0'  # Don't fail the build on vulnerabilities
       
       - name: Upload Trivy results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v3
+        if: always() && github.repository == 'f5gov/nginx-webssh2'  # Only upload for main repo, not forks
+        continue-on-error: true  # Don't fail if upload doesn't work
         with:
           sarif_file: 'trivy-results.sarif'
+          category: 'container-scan'
+      
+      - name: Display Trivy scan summary
+        if: always()
+        run: |
+          echo "## Vulnerability Scan Summary" >> $GITHUB_STEP_SUMMARY
+          echo "Scanned image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.build-and-push.outputs.primary-tag }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ -f trivy-results.sarif ]; then
+            echo "✅ Scan completed. Results uploaded to Security tab (if available)." >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "To view detailed results:" >> $GITHUB_STEP_SUMMARY
+            echo "- Check the Security tab in the repository" >> $GITHUB_STEP_SUMMARY
+            echo "- Or download the SARIF artifact from this workflow run" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ Scan may have encountered issues." >> $GITHUB_STEP_SUMMARY
+          fi
+      
+      - name: Upload scan results as artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: trivy-results
+          path: trivy-results.sarif
+          retention-days: 30
