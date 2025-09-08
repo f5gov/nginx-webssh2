@@ -1,6 +1,6 @@
 # NGINX + WebSSH2 Container with FIPS Support
 # Base: Red Hat UBI8 Minimal with Node.js 22, NGINX, and s6-overlay
-FROM registry.access.redhat.com/ubi8/ubi-minimal:latest
+FROM registry.access.redhat.com/ubi9/ubi-minimal:latest
 
 # Build arguments
 ARG BUILD_DATE
@@ -28,12 +28,11 @@ ENV S6_OVERLAY_VERSION=3.1.6.2 \
     LANG=C.UTF-8 \
     LC_ALL=C.UTF-8
 
-# Install base packages and enable FIPS
+# Install base packages, enable FIPS, and install NGINX
 RUN microdnf update -y && \
     microdnf install -y \
         tar \
         findutils \
-        curl \
         ca-certificates \
         gnupg2 \
         openssl \
@@ -42,16 +41,16 @@ RUN microdnf update -y && \
         util-linux \
         xz \
         gettext && \
-    # Enable FIPS mode (may not work in all container environments)
-    (fips-mode-setup --enable --no-bootcfg || echo "FIPS setup not available in container") && \
-    (update-crypto-policies --set FIPS || echo "Crypto policies not available in container") && \
-    echo "FIPS mode setup attempted" && \
-    microdnf clean all
-
-# Create nginx repository configuration
-RUN printf '[nginx-stable]\n\
+    # Enable FIPS mode for UBI9 with OpenSSL 3.0 provider model
+    (fips-mode-setup --enable --no-bootcfg 2>/dev/null || echo "FIPS setup not available in container") && \
+    (update-crypto-policies --set FIPS 2>/dev/null || echo "Crypto policies not available in container") && \
+    # Verify OpenSSL 3.0 FIPS provider
+    (openssl list -providers 2>/dev/null | grep -q "fips" && echo "FIPS provider detected" || echo "FIPS provider not available") && \
+    echo "UBI9 FIPS mode setup attempted" && \
+    # Create nginx repository configuration
+    printf '[nginx-stable]\n\
 name=nginx stable repo\n\
-baseurl=http://nginx.org/packages/centos/8/$basearch/\n\
+baseurl=http://nginx.org/packages/rhel/9/$basearch/\n\
 gpgcheck=1\n\
 enabled=1\n\
 gpgkey=https://nginx.org/keys/nginx_signing.key\n\
@@ -59,14 +58,13 @@ module_hotfixes=true\n\
 \n\
 [nginx-mainline]\n\
 name=nginx mainline repo\n\
-baseurl=http://nginx.org/packages/mainline/centos/8/$basearch/\n\
+baseurl=http://nginx.org/packages/mainline/rhel/9/$basearch/\n\
 gpgcheck=1\n\
 enabled=0\n\
 gpgkey=https://nginx.org/keys/nginx_signing.key\n\
-module_hotfixes=true\n' > /etc/yum.repos.d/nginx.repo
-
-# Import NGINX GPG key and install NGINX
-RUN rpm --import https://nginx.org/keys/nginx_signing.key && \
+module_hotfixes=true\n' > /etc/yum.repos.d/nginx.repo && \
+    # Import NGINX GPG key and install NGINX
+    rpm --import https://nginx.org/keys/nginx_signing.key && \
     microdnf install -y nginx && \
     nginx -v && \
     microdnf clean all
@@ -96,13 +94,11 @@ RUN ARCH=$(uname -m) && \
     tar -C / -Jxpf /tmp/s6-overlay-${S6_ARCH}.tar.xz && \
     rm /tmp/s6-overlay-*.tar.xz
 
-# Create users and groups
+# Create users, groups, and directories
 RUN groupadd --gid 1001 webssh2 && \
     useradd --uid 1001 --gid webssh2 --shell /bin/bash --create-home webssh2 && \
-    usermod -a -G nginx webssh2
-
-# Create directories
-RUN mkdir -p \
+    usermod -a -G nginx webssh2 && \
+    mkdir -p \
         /usr/src/webssh2 \
         /etc/nginx/certs \
         /etc/nginx/dhparam \
@@ -130,14 +126,21 @@ USER root
 # Copy s6-overlay configuration
 COPY ./rootfs/ /
 
-# Set executable permissions on scripts
+# Set executable permissions on scripts and create environment export script
 RUN find /etc/cont-init.d -name "*.sh" -exec chmod +x {} \; && \
     find /etc/s6-overlay -name "run" -exec chmod +x {} \; && \
     find /usr/local/bin -name "*.sh" -exec chmod +x {} \; && \
-    chmod +x /etc/cont-init.d/* /usr/local/bin/*
+    chmod +x /etc/cont-init.d/* /usr/local/bin/* && \
+    echo '#!/bin/bash' > /usr/local/bin/export-env.sh && \
+    echo '# Export all WebSSH2 related environment variables' >> /usr/local/bin/export-env.sh && \
+    echo 'env | grep -E "^(NGINX_|WEBSSH2_|TLS_|SECURITY_|HSTS_|CSP_|FIPS_|MTLS_)" | while IFS= read -r line; do echo "export ${line%%=*}=\"${line#*=}\""; done > /etc/webssh2-env' >> /usr/local/bin/export-env.sh && \
+    chmod +x /usr/local/bin/export-env.sh
 
 # Set default environment variables
 ENV \
+    # UBI9 FIPS Configuration
+    OPENSSL_CONF=/etc/pki/tls/openssl.cnf \
+    OPENSSL_FIPS=1 \
     # TLS Configuration
     TLS_MODE=self-signed \
     TLS_CERT_PATH=/etc/nginx/certs/cert.pem \
@@ -228,12 +231,6 @@ HEALTHCHECK --interval=30s \
             --retries=3 \
             --start-period=10s \
             CMD /usr/local/bin/healthcheck.sh
-
-# Create environment export script
-RUN echo '#!/bin/bash' > /usr/local/bin/export-env.sh && \
-    echo '# Export all WebSSH2 related environment variables' >> /usr/local/bin/export-env.sh && \
-    echo 'env | grep -E "^(NGINX_|WEBSSH2_|TLS_|SECURITY_|HSTS_|CSP_|FIPS_|MTLS_)" | while IFS= read -r line; do echo "export ${line%%=*}=\"${line#*=}\""; done > /etc/webssh2-env' >> /usr/local/bin/export-env.sh && \
-    chmod +x /usr/local/bin/export-env.sh
 
 # Use s6-overlay as entrypoint
 ENTRYPOINT ["/bin/bash", "-c", "/usr/local/bin/export-env.sh && exec /init"]
