@@ -19,4 +19,4 @@ chown webssh2:webssh2 /var/log/webssh2/webssh2.log
 
 # Run as webssh2 user and redirect all output to log file
 # Using s6-setuidgid to switch user and tee to duplicate output
-exec s6-setuidgid webssh2 sh -c 'exec node index.js 2>&1 | tee -a /var/log/webssh2/webssh2.log'
+exec s6-setuidgid webssh2 sh -c 'exec node dist/index.js 2>&1 | tee -a /var/log/webssh2/webssh2.log'

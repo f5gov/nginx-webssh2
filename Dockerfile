@@ -1,5 +1,25 @@
+# Multi-stage build for TypeScript compilation
+# Stage 1: Build WebSSH2 TypeScript
+FROM node:22-alpine AS builder
+
+WORKDIR /build
+
+# Copy WebSSH2 source for TypeScript compilation
+COPY ./webssh2/package*.json ./
+COPY ./webssh2/tsconfig*.json ./
+COPY ./webssh2/index.ts ./
+COPY ./webssh2/app/ ./app/
+COPY ./webssh2/types/ ./types/
+
+# Install ALL dependencies (including dev) and build
+RUN npm ci --no-audit --no-fund && \
+    npm run build && \
+    npm prune --production && \
+    rm -rf app/ *.ts tsconfig*.json types/
+
+# Stage 2: Production container
 # NGINX + WebSSH2 Container with FIPS Support
-# Base: Red Hat UBI8 Minimal with Node.js 22, NGINX, and s6-overlay
+# Base: Red Hat UBI9 Minimal with Node.js 22, NGINX, and s6-overlay
 FROM registry.access.redhat.com/ubi9/ubi-minimal:latest
 
 # Build arguments
@@ -108,20 +128,10 @@ RUN groupadd --gid 1001 webssh2 && \
     chown -R nginx:nginx /var/log/nginx /var/cache/nginx /etc/nginx /run/nginx && \
     chown -R webssh2:webssh2 /usr/src/webssh2 /var/log/webssh2
 
-# Copy WebSSH2 application from submodule
-COPY ./webssh2/package*.json /usr/src/webssh2/
-COPY ./webssh2/index.js /usr/src/webssh2/
-COPY ./webssh2/app/ /usr/src/webssh2/app/
-COPY ./webssh2/config.json.sample /usr/src/webssh2/
-
-# Install WebSSH2 dependencies as webssh2 user
-USER webssh2
-WORKDIR /usr/src/webssh2
-RUN npm ci --only=production --no-audit --no-fund && \
-    npm cache clean --force
-
-# Switch back to root for final setup
-USER root
+# Copy built WebSSH2 application from builder stage
+COPY --from=builder --chown=webssh2:webssh2 /build/package*.json /usr/src/webssh2/
+COPY --from=builder --chown=webssh2:webssh2 /build/dist/ /usr/src/webssh2/dist/
+COPY --from=builder --chown=webssh2:webssh2 /build/node_modules/ /usr/src/webssh2/node_modules/
 
 # Copy s6-overlay configuration
 COPY ./rootfs/ /
