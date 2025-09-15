@@ -49,7 +49,7 @@ check_nginx_process() {
 
 # Check if WebSSH2 is running
 check_webssh2_process() {
-    if pgrep -f "node.*index.js" > /dev/null 2>&1; then
+    if pgrep -f "node.*dist/index.js" > /dev/null 2>&1; then
         add_message "OK" "WebSSH2 process is running"
         return 0
     else

@@ -103,8 +103,8 @@ if [[ ! -d "/usr/src/webssh2/node_modules" ]]; then
 fi
 
 # Check if WebSSH2 main file exists
-if [[ ! -f "/usr/src/webssh2/index.js" ]]; then
-    echo "[WebSSH2] ERROR: WebSSH2 main file not found: /usr/src/webssh2/index.js"
+if [[ ! -f "/usr/src/webssh2/dist/index.js" ]]; then
+    echo "[WebSSH2] ERROR: WebSSH2 main file not found: /usr/src/webssh2/dist/index.js"
     exit 1
 fi
 
