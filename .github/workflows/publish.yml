@@ -111,7 +111,7 @@ jobs:
             # Set tag for PR
             type=ref,event=pr
             # Set sha tag for branches (not PRs)
-            type=sha,prefix={{branch}}-,format=short,enable=${{ github.event_name != 'pull_request' }}
+            type=sha,prefix=${{ github.ref_name }}-,format=short,enable=${{ github.event_name != 'pull_request' }}
           labels: |
             org.opencontainers.image.title=NGINX WebSSH2
             org.opencontainers.image.description=Production-ready NGINX + WebSSH2 container with FIPS 140-2 support
