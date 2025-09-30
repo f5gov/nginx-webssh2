@@ -143,7 +143,7 @@ RUN find /etc/cont-init.d -name "*.sh" -exec chmod +x {} \; && \
     chmod +x /etc/cont-init.d/* /usr/local/bin/* && \
     echo '#!/bin/bash' > /usr/local/bin/export-env.sh && \
     echo '# Export all WebSSH2 related environment variables' >> /usr/local/bin/export-env.sh && \
-    echo 'env | grep -E "^(NGINX_|WEBSSH2_|TLS_|SECURITY_|HSTS_|CSP_|FIPS_|MTLS_)" | while IFS= read -r line; do echo "export ${line%%=*}=\"${line#*=}\""; done > /etc/webssh2-env' >> /usr/local/bin/export-env.sh && \
+    echo 'env | grep -E "^(NGINX_|WEBSSH2_|TLS_|SECURITY_|HSTS_|CSP_|FIPS_|MTLS_|DEBUG)" | while IFS= read -r line; do echo "export ${line%%=*}=\"${line#*=}\""; done > /etc/webssh2-env' >> /usr/local/bin/export-env.sh && \
     chmod +x /usr/local/bin/export-env.sh
 
 # Set default environment variables
@@ -225,7 +225,6 @@ ENV \
     \
     # Legacy support
     PORT=2222 \
-    DEBUG= \
     \
     # Health check
     HEALTHCHECK_INTERVAL=30 \
