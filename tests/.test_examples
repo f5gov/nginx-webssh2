@@ -1,0 +1,191 @@
+# Quick Test Examples
+# Copy and paste these examples to run specific test scenarios
+
+# ==============================================================================
+# Running All Tests
+# ==============================================================================
+
+# Run complete test suite
+cd tests && ./run_tests.sh
+
+# Run without pulling image (faster)
+cd tests && ./run_tests.sh --skip-pull
+
+# Run and keep containers for debugging
+cd tests && ./run_tests.sh --no-cleanup
+
+# ==============================================================================
+# Running Individual Test Files
+# ==============================================================================
+
+# Run deployment tests
+bats tests/README_deployment_tests.bats
+
+# Run docker-compose tests
+bats tests/docker_compose_tests.bats
+
+# Run with TAP output
+bats --tap tests/README_deployment_tests.bats
+
+# ==============================================================================
+# Running Specific Tests
+# ==============================================================================
+
+# Test session secret requirement
+bats tests/README_deployment_tests.bats -f "session secret"
+
+# Test health checks
+bats tests/README_deployment_tests.bats -f "health"
+
+# Test TLS configuration
+bats tests/README_deployment_tests.bats -f "TLS"
+
+# Test logging
+bats tests/README_deployment_tests.bats -f "logging"
+
+# Test Docker Compose
+bats tests/docker_compose_tests.bats -f "Docker Compose"
+
+# ==============================================================================
+# Manual Container Testing
+# ==============================================================================
+
+# Test basic deployment (should work)
+docker run -d -p 8443:443 --name test-webssh2 \
+  -e WEBSSH2_SESSION_SECRET="$(openssl rand -base64 32)" \
+  ghcr.io/f5gov/nginx-webssh2:latest
+
+# Wait and check health
+sleep 10
+curl -k https://localhost:8443/health
+
+# Test without session secret (should fail)
+docker run -d -p 8444:443 --name test-webssh2-fail \
+  ghcr.io/f5gov/nginx-webssh2:latest
+
+# Check logs for error
+sleep 5
+docker logs test-webssh2-fail
+
+# Clean up
+docker rm -f test-webssh2 test-webssh2-fail
+
+# ==============================================================================
+# Debugging Failed Tests
+# ==============================================================================
+
+# Run single test with verbose output
+bats -v tests/README_deployment_tests.bats -f "specific test name"
+
+# Keep containers after test failure for inspection
+docker ps -a --filter "name=nginx-webssh2-test"
+
+# Get logs from test container
+docker logs nginx-webssh2-test-<number>
+
+# Execute commands in test container
+docker exec nginx-webssh2-test-<number> /usr/local/bin/healthcheck.sh
+docker exec nginx-webssh2-test-<number> ps aux
+docker exec nginx-webssh2-test-<number> cat /var/log/nginx/error.log
+
+# Clean up all test containers
+docker ps -a --filter "name=nginx-webssh2-test" -q | xargs docker rm -f
+
+# ==============================================================================
+# Performance Testing
+# ==============================================================================
+
+# Run tests with timing
+bats --timing tests/README_deployment_tests.bats
+
+# Run tests in parallel (requires bats >= 1.5.0)
+bats --jobs 4 tests/*.bats
+
+# ==============================================================================
+# CI/CD Integration
+# ==============================================================================
+
+# GitHub Actions style
+docker pull ghcr.io/f5gov/nginx-webssh2:latest
+cd tests && ./run_tests.sh --skip-pull
+
+# With test results output
+bats --formatter junit tests/*.bats > test-results.xml
+
+# ==============================================================================
+# Custom Test Scenarios
+# ==============================================================================
+
+# Test with FIPS mode
+docker run -d -p 8443:443 --name test-fips \
+  -e WEBSSH2_SESSION_SECRET="$(openssl rand -base64 32)" \
+  -e FIPS_MODE=enabled \
+  -e FIPS_CHECK=false \
+  ghcr.io/f5gov/nginx-webssh2:latest
+
+# Test with custom SSH target
+docker run -d -p 8443:443 --name test-ssh-target \
+  -e WEBSSH2_SESSION_SECRET="$(openssl rand -base64 32)" \
+  -e WEBSSH2_SSH_HOST=ssh.example.com \
+  -e WEBSSH2_SSH_PORT=22 \
+  ghcr.io/f5gov/nginx-webssh2:latest
+
+# Test with debug logging
+docker run -d -p 8443:443 --name test-debug \
+  -e WEBSSH2_SESSION_SECRET="$(openssl rand -base64 32)" \
+  -e DEBUG="webssh2:*" \
+  -e NGINX_ACCESS_LOG=on \
+  ghcr.io/f5gov/nginx-webssh2:latest
+
+# Test with provided certificates
+mkdir -p /tmp/test-certs
+openssl req -x509 -nodes -days 1 -newkey rsa:2048 \
+  -keyout /tmp/test-certs/key.pem \
+  -out /tmp/test-certs/cert.pem \
+  -subj "/CN=test.localhost/O=Test/C=US"
+
+docker run -d -p 8443:443 --name test-certs \
+  -e WEBSSH2_SESSION_SECRET="$(openssl rand -base64 32)" \
+  -e TLS_MODE=provided \
+  -v /tmp/test-certs:/etc/nginx/certs:ro \
+  ghcr.io/f5gov/nginx-webssh2:latest
+
+# ==============================================================================
+# Load Testing
+# ==============================================================================
+
+# Simple load test with curl
+for i in {1..100}; do
+  curl -k -s https://localhost:8443/health &
+done
+wait
+
+# Load test with Apache Bench (if available)
+ab -n 1000 -c 10 -k https://localhost:8443/health
+
+# WebSocket load test
+# (requires wscat: npm install -g wscat)
+wscat -c wss://localhost:8443/socket.io/?transport=websocket
+
+# ==============================================================================
+# Container Inspection
+# ==============================================================================
+
+# Check running processes
+docker exec test-webssh2 ps aux
+
+# Check environment variables
+docker exec test-webssh2 env | grep WEBSSH2
+
+# Check network ports
+docker exec test-webssh2 netstat -tlnp
+
+# Check logs
+docker exec test-webssh2 tail -f /var/log/nginx/error.log
+docker exec test-webssh2 tail -f /var/log/webssh2/webssh2.log
+
+# Check certificates
+docker exec test-webssh2 openssl x509 -in /etc/nginx/certs/cert.pem -text -noout
+
+# Check s6 services
+docker exec test-webssh2 s6-svstat /run/service/*
