@@ -27,5 +27,5 @@ jobs:
           npx --yes release-please@latest manifest-release \
             --config-file release-please-config.json \
             --manifest-file release-please-manifest.json \
-            --repo-url "${REPO}" \
+            --repo-url "https://github.com/${REPO}" \
             --target-branch "main"
