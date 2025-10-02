@@ -40,9 +40,12 @@ jobs:
           echo "Upstream release tag: ${RAW_VERSION}" >> "$GITHUB_STEP_SUMMARY"
           echo "Container release version: ${VERSION}" >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Open release PR
-        uses: googleapis/release-please-action@v4
-        with:
-          command: release-pr
-          release-as: ${{ steps.version.outputs.version }}
-          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Create release PR via release-please
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          npx --yes release-please@latest manifest-pr \
+            --config-file release-please-config.json \
+            --manifest-file release-please-manifest.json \
+            --release-as "${VERSION}"
