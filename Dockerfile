@@ -2,21 +2,21 @@
 # Stage 1: Build WebSSH2 TypeScript
 FROM node:22-alpine AS builder
 
+ARG WEBSSH2_VERSION
+
 WORKDIR /build
 
-# Copy WebSSH2 source for TypeScript compilation
-COPY ./webssh2/package*.json ./
-COPY ./webssh2/tsconfig*.json ./
-COPY ./webssh2/index.ts ./
-COPY ./webssh2/app/ ./app/
-COPY ./webssh2/scripts/ ./scripts/
-COPY ./webssh2/types/ ./types/
+# Copy prebuilt WebSSH2 artifact contents
+COPY ./vendor/webssh2/package*.json ./
+COPY ./vendor/webssh2/scripts/ ./scripts/
+COPY ./vendor/webssh2/dist/ ./dist/
+COPY ./vendor/webssh2/manifest.json ./manifest.json
 
-# Install ALL dependencies (including dev) and build
-RUN npm ci --no-audit --no-fund && \
-    npm run build && \
-    npm prune --production && \
-    rm -rf app/ *.ts tsconfig*.json types/
+# Install production dependencies for target platform
+RUN npm ci --omit=dev --ignore-scripts --no-audit --no-fund && \
+    npm run prepare:runtime && \
+    npm prune --omit=dev && \
+    rm -rf node_modules/.cache
 
 # Stage 2: Production container
 # NGINX + WebSSH2 Container with FIPS Support
@@ -133,6 +133,7 @@ RUN groupadd --gid 1001 webssh2 && \
 COPY --from=builder --chown=webssh2:webssh2 /build/package*.json /usr/src/webssh2/
 COPY --from=builder --chown=webssh2:webssh2 /build/dist/ /usr/src/webssh2/dist/
 COPY --from=builder --chown=webssh2:webssh2 /build/node_modules/ /usr/src/webssh2/node_modules/
+COPY --from=builder --chown=webssh2:webssh2 /build/manifest.json /usr/src/webssh2/manifest.json
 
 # Copy s6-overlay configuration
 COPY ./rootfs/ /

@@ -1,20 +1,15 @@
 name: Build and Publish Docker Image
 
 on:
-  push:
-    branches:
-      - main
-    tags:
-      - 'v*.*.*'
-  pull_request:
-    branches:
-      - main
   release:
     types: [published]
   workflow_dispatch:
     inputs:
+      version:
+        description: 'WebSSH2 version (e.g., 2.4.0)'
+        required: true
       publish:
-        description: 'Publish to GHCR'
+        description: 'Push to GHCR'
         required: false
         default: 'false'
         type: choice
@@ -32,86 +27,87 @@ jobs:
     permissions:
       contents: read
       packages: write
-      # attestations: write  # Uncomment when attestation is re-enabled
-      id-token: write
-    outputs:
-      primary-tag: ${{ steps.determine-tag.outputs.primary-tag }}
-    
+
     steps:
-      - name: Checkout repository with submodules
+      - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          submodules: recursive
           fetch-depth: 0
 
-      - name: Extract WebSSH2 version
-        id: webssh2-version
+      - name: Determine release context
+        id: context
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          RELEASE_TAG: ${{ github.event.release.tag_name || '' }}
+          INPUT_VERSION: ${{ inputs.version || '' }}
+          INPUT_PUBLISH: ${{ inputs.publish || 'false' }}
         run: |
-          VERSION=$(jq -r '.version' webssh2/package.json)
-          echo "WebSSH2 version: $VERSION"
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          
-          # Parse version for Docker tags
-          # Handle pre-release versions (e.g., 2.0.0-alpha)
-          if [[ "$VERSION" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)(-(.+))?$ ]]; then
+          if [[ "${EVENT_NAME}" == "release" ]]; then
+            RAW_VERSION="${RELEASE_TAG#v}"
+            PUBLISH="true"
+          else
+            RAW_VERSION="${INPUT_VERSION#v}"
+            PUBLISH="${INPUT_PUBLISH}"
+          fi
+
+          if [[ -z "${RAW_VERSION}" ]]; then
+            echo "Version is required" >&2
+            exit 1
+          fi
+
+          if [[ "${RAW_VERSION}" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)(-(.+))?$ ]]; then
             MAJOR="${BASH_REMATCH[1]}"
             MINOR="${BASH_REMATCH[2]}"
             PATCH="${BASH_REMATCH[3]}"
             PRERELEASE="${BASH_REMATCH[5]}"
-            
-            echo "major=$MAJOR" >> $GITHUB_OUTPUT
-            echo "minor=$MINOR" >> $GITHUB_OUTPUT
-            echo "patch=$PATCH" >> $GITHUB_OUTPUT
-            echo "prerelease=$PRERELEASE" >> $GITHUB_OUTPUT
-            
-            # Create semver tags
-            if [ -n "$PRERELEASE" ]; then
-              echo "is_prerelease=true" >> $GITHUB_OUTPUT
-              echo "semver=$VERSION" >> $GITHUB_OUTPUT
-            else
-              echo "is_prerelease=false" >> $GITHUB_OUTPUT
-              echo "semver=$VERSION" >> $GITHUB_OUTPUT
-            fi
+          else
+            echo "Version ${RAW_VERSION} is not valid semver" >&2
+            exit 1
           fi
+
+          IS_PRERELEASE="false"
+          if [[ -n "${PRERELEASE}" ]]; then
+            IS_PRERELEASE="true"
+          fi
+
+          echo "version=${RAW_VERSION}" >> "$GITHUB_OUTPUT"
+          echo "major=${MAJOR}" >> "$GITHUB_OUTPUT"
+          echo "minor=${MINOR}" >> "$GITHUB_OUTPUT"
+          echo "patch=${PATCH}" >> "$GITHUB_OUTPUT"
+          echo "prerelease=${PRERELEASE}" >> "$GITHUB_OUTPUT"
+          echo "is_prerelease=${IS_PRERELEASE}" >> "$GITHUB_OUTPUT"
+          echo "publish=${PUBLISH}" >> "$GITHUB_OUTPUT"
+
+      - name: Fetch WebSSH2 artifact
+        run: ./scripts/fetch-webssh2-release.sh "${{ steps.context.outputs.version }}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
-        
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-        
+
       - name: Log in to the Container registry
-        if: github.event_name != 'pull_request'
+        if: steps.context.outputs.publish == 'true'
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      
+
       - name: Extract metadata
         id: meta
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            # Always set latest tag for main branch
-            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
-            # Always set main tag for main branch
-            type=raw,value=main,enable=${{ github.ref == 'refs/heads/main' }}
-            # Set alpha/beta tag for prerelease versions
-            type=raw,value=${{ steps.webssh2-version.outputs.prerelease }},enable=${{ github.ref == 'refs/heads/main' && steps.webssh2-version.outputs.is_prerelease == 'true' }}
-            # WebSSH2 version tags
-            type=raw,value=${{ steps.webssh2-version.outputs.version }},enable={{is_default_branch}}
-            type=raw,value=${{ steps.webssh2-version.outputs.major }}.${{ steps.webssh2-version.outputs.minor }},enable=${{ github.ref == 'refs/heads/main' && steps.webssh2-version.outputs.is_prerelease == 'false' }}
-            type=raw,value=${{ steps.webssh2-version.outputs.major }},enable=${{ github.ref == 'refs/heads/main' && steps.webssh2-version.outputs.is_prerelease == 'false' }}
-            # Git tag based versions (if you still want to support git tags)
-            type=ref,event=tag
-            # Set tag for branch (except main)
-            type=ref,event=branch,enable=${{ github.ref != 'refs/heads/main' }}
-            # Set tag for PR
-            type=ref,event=pr
-            # Set sha tag for branches (not PRs)
-            type=sha,prefix=${{ github.ref_name }}-,format=short,enable=${{ github.event_name != 'pull_request' }}
+            type=raw,value=latest,enable=${{ steps.context.outputs.is_prerelease == 'false' }}
+            type=raw,value=v${{ steps.context.outputs.version }}
+            type=raw,value=${{ steps.context.outputs.version }}
+            type=raw,value=${{ steps.context.outputs.major }}.${{ steps.context.outputs.minor }},enable=${{ steps.context.outputs.is_prerelease == 'false' }}
+            type=raw,value=${{ steps.context.outputs.major }},enable=${{ steps.context.outputs.is_prerelease == 'false' }}
           labels: |
             org.opencontainers.image.title=NGINX WebSSH2
             org.opencontainers.image.description=Production-ready NGINX + WebSSH2 container with FIPS 140-2 support
@@ -119,98 +115,35 @@ jobs:
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
             org.opencontainers.image.documentation=${{ github.server_url }}/${{ github.repository }}/blob/main/README.md
             org.opencontainers.image.licenses=MIT
-            webssh2.version=${{ steps.webssh2-version.outputs.version }}
-      
-      - name: Build and push Docker image
-        id: build
+            webssh2.version=${{ steps.context.outputs.version }}
+
+      - name: Build and (optionally) push Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
           platforms: linux/amd64,linux/arm64
-          push: ${{ github.event_name != 'pull_request' }}
+          push: ${{ steps.context.outputs.publish == 'true' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
             BUILD_DATE=${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.created'] }}
-            BUILD_VERSION=${{ steps.webssh2-version.outputs.version }}
-            WEBSSH2_VERSION=${{ steps.webssh2-version.outputs.version }}
+            BUILD_VERSION=${{ steps.context.outputs.version }}
+            WEBSSH2_VERSION=${{ steps.context.outputs.version }}
             VCS_REF=${{ github.sha }}
-      
-      # Attestation
-      # - name: Generate artifact attestation
-      #   if: github.event_name != 'pull_request'
-      #   uses: actions/attest-build-provenance@v1
-      #   with:
-      #     subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-      #     subject-digest: ${{ steps.build.outputs.digest }}
-      #     push-to-registry: true
-      
-      - name: Determine primary tag for scanning
-        id: determine-tag
-        if: github.event_name != 'pull_request'
-        run: |
-          # Determine the primary tag based on version and branch
-          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
-            # Always use 'latest' for main branch since it's always set
-            PRIMARY_TAG="latest"
-          else
-            # For non-main branches, use the version tag
-            PRIMARY_TAG="${{ steps.webssh2-version.outputs.version }}"
-          fi
-          
-          echo "Primary tag for scanning: $PRIMARY_TAG"
-          echo "primary-tag=$PRIMARY_TAG" >> $GITHUB_OUTPUT
 
-  vulnerability-scan:
-    needs: build-and-push
-    if: github.event_name != 'pull_request'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: read
-      security-events: write
-      actions: read  # Required for workflow metadata access
-    
-    steps:
-      - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.build-and-push.outputs.primary-tag }}
-          format: 'sarif'
-          output: 'trivy-results.sarif'
-          severity: 'CRITICAL,HIGH,MEDIUM'
-          exit-code: '0'  # Don't fail the build on vulnerabilities
-      
-      - name: Upload Trivy results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v3
-        if: always() && github.repository == 'f5gov/nginx-webssh2'  # Only upload for main repo, not forks
-        continue-on-error: true  # Don't fail if upload doesn't work
-        with:
-          sarif_file: 'trivy-results.sarif'
-          category: 'container-scan'
-      
-      - name: Display Trivy scan summary
-        if: always()
+      - name: Summarize build outcome
         run: |
-          echo "## Vulnerability Scan Summary" >> $GITHUB_STEP_SUMMARY
-          echo "Scanned image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.build-and-push.outputs.primary-tag }}" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          if [ -f trivy-results.sarif ]; then
-            echo "✅ Scan completed. Results uploaded to Security tab (if available)." >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "To view detailed results:" >> $GITHUB_STEP_SUMMARY
-            echo "- Check the Security tab in the repository" >> $GITHUB_STEP_SUMMARY
-            echo "- Or download the SARIF artifact from this workflow run" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "⚠️ Scan may have encountered issues." >> $GITHUB_STEP_SUMMARY
-          fi
-      
-      - name: Upload scan results as artifact
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: trivy-results
-          path: trivy-results.sarif
-          retention-days: 30
+          {
+            echo "## Image Build"
+            echo "WebSSH2 version: ${{ steps.context.outputs.version }}"
+            echo "Pushed: ${{ steps.context.outputs.publish }}"
+            if [[ "${{ steps.context.outputs.publish }}" == "true" ]]; then
+              echo ""
+              echo "### Tags"
+              echo '```'
+              echo "${{ steps.meta.outputs.tags }}"
+              echo '```'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"

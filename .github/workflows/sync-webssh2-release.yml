@@ -1,0 +1,48 @@
+name: Sync WebSSH2 Release
+
+on:
+  repository_dispatch:
+    types:
+      - webssh2-release
+
+jobs:
+  release-pr:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Sanitize version
+        id: version
+        env:
+          RAW_VERSION: ${{ github.event.client_payload.version }}
+        run: |
+          VERSION="${RAW_VERSION}"
+          VERSION="${VERSION#webssh2-server-}"
+          VERSION="${VERSION#v}"
+
+          if [[ -z "${VERSION}" ]]; then
+            echo "Unable to determine version from payload '${RAW_VERSION}'" >&2
+            exit 1
+          fi
+
+          if [[ ! "${VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+ ]]; then
+            echo "Version ${VERSION} is not valid semver" >&2
+            exit 1
+          fi
+
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "Upstream release tag: ${RAW_VERSION}" >> "$GITHUB_STEP_SUMMARY"
+          echo "Container release version: ${VERSION}" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Open release PR
+        uses: google-github-actions/release-please-action@v4
+        with:
+          command: release-pr
+          release-as: ${{ steps.version.outputs.version }}
+          token: ${{ secrets.GITHUB_TOKEN }}
