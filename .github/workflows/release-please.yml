@@ -19,12 +19,12 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Run release-please manifest-release
+      - name: Run release-please github-release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
         run: |
-          npx --yes release-please@latest manifest-release \
+          npx --yes release-please@latest github-release \
             --config-file release-please-config.json \
             --manifest-file release-please-manifest.json \
             --repo-url "https://github.com/${REPO}" \
