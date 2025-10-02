@@ -6,16 +6,19 @@ This document contains detailed build instructions for the nginx-webssh2 contain
 
 - Docker and Docker Compose
 - Access to Red Hat container registry (registry.access.redhat.com)
-- Git with submodule support
+- curl and sha256sum/shasum for artifact verification
 
-## Clone Repository with Submodules
+## Clone Repository & Fetch WebSSH2
 
 ```bash
-git clone --recursive https://github.com/f5gov/nginx-webssh2.git
+git clone https://github.com/f5gov/nginx-webssh2.git
 cd nginx-webssh2
 
-# If you already cloned without submodules
-git submodule update --init --recursive
+# Download the WebSSH2 release artifact referenced in WEBSSH2_VERSION
+./scripts/fetch-webssh2-release.sh "$(cat WEBSSH2_VERSION)"
+
+# If the upstream repository is private, export GITHUB_TOKEN first:
+# export GITHUB_TOKEN=ghp_xxx
 ```
 
 ## Build and Run
@@ -50,12 +53,14 @@ docker run -d -p 443:443 --name nginx-webssh2 nginx-webssh2:latest
 ### Local Development Setup
 
 ```bash
-# Clone repositories
-git clone https://github.com/billchurch/webssh2.git
+# Clone container repository
 git clone https://github.com/your-org/nginx-webssh2.git
+cd nginx-webssh2
+
+# Pull the WebSSH2 release artifact referenced in WEBSSH2_VERSION
+./scripts/fetch-webssh2-release.sh "$(cat WEBSSH2_VERSION)"
 
 # Build for development
-cd nginx-webssh2
 docker-compose up --build
 
 # Enable debugging
@@ -145,8 +150,9 @@ nginx-webssh2/
 ├── .env.example                            # Environment configuration template
 ├── README.md                              # Main documentation
 ├── .gitignore                             # Git ignore patterns
-├── .gitmodules                            # Submodule configuration (webssh2)
-├── webssh2/                               # WebSSH2 submodule (newmain branch)
+├── WEBSSH2_VERSION                        # Upstream WebSSH2 version selector
+├── scripts/                               # Utility helpers
+│   └── fetch-webssh2-release.sh           # Downloads upstream release artifact
 ├── rootfs/                                # Container filesystem overlay
 │   ├── etc/
 │   │   ├── nginx/                         # NGINX configuration
@@ -198,17 +204,16 @@ See [GITHUB_WORKFLOW.md](../GITHUB_WORKFLOW.md) for detailed CI/CD documentation
 
 ### Automated Build Process
 
-Every push triggers:
-1. Multi-architecture Docker build
-2. Vulnerability scanning with Trivy
-3. Container attestation generation
-4. Automatic push to GitHub Container Registry
+- WebSSH2 release → repository_dispatch to this repo
+- Release-Please opens a release PR pegged to that WebSSH2 version
+- Merging the release PR publishes a GitHub Release
+- The release event builds and pushes multi-architecture images to GHCR
 
 ## Troubleshooting
 
 ### Common Build Issues
 
-1. **Submodule not initialized**: Run `git submodule update --init --recursive`
+1. **WebSSH2 artifact missing**: Run `./scripts/fetch-webssh2-release.sh "$(cat WEBSSH2_VERSION)"`
 2. **Docker build fails**: Ensure Docker daemon is running and has sufficient resources
 3. **FIPS validation fails**: Check host kernel FIPS support
 4. **Certificate generation fails**: Verify OpenSSL installation and permissions

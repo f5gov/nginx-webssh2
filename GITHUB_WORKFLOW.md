@@ -2,17 +2,16 @@
 
 ## Overview
 
-This repository is configured with automated CI/CD to build and publish Docker images to GitHub Container Registry (ghcr.io). The workflow provides multi-architecture builds, vulnerability scanning, and automatic versioning.
+This repository is configured with release-driven CI/CD to build and publish Docker images to GitHub Container Registry (ghcr.io). Releases are orchestrated by release-please, consume the prebuilt WebSSH2 artifact, and produce multi-architecture images tagged from the upstream WebSSH2 version.
 
 ## Workflow Triggers
 
-The workflow (`.github/workflows/publish.yml`) triggers on:
+The workflows trigger on:
 
-- **Push to main branch** - Builds and tags as `latest`
-- **Version tags** - When you push tags like `v1.0.0`, creates semantic version tags
-- **Pull requests** - Builds but doesn't push (for testing)
-- **Manual trigger** - Via GitHub Actions UI with optional publish flag
-- **Release publication** - When you create a GitHub release
+- **repository_dispatch:webssh2-release** – Created by the upstream WebSSH2 release notifier; runs release-please to open a release PR pinned to that version.
+- **Push to main (post-merge)** – release-please finalizes the GitHub Release when a release PR lands.
+- **Release publication** – The `publish` workflow downloads the matching WebSSH2 artifact and builds/pushes the container image.
+- **Manual trigger** – `publish.yml` can be run on demand with an explicit version.
 
 ## Container Registry Details
 
@@ -24,12 +23,10 @@ ghcr.io/f5gov/nginx-webssh2
 
 ### Available Tags
 
-- `latest` - Latest build from main branch
+- `latest` - Mirrors the most recent WebSSH2 release
 - `v1.0.0` - Specific version release
 - `v1.0` - Major.minor version (updates with patches)
 - `v1` - Major version (updates with minor/patches)
-- `main-<sha>` - Commit-specific builds
-- `pr-<number>` - Pull request preview builds
 
 ### Multi-Architecture Support
 
@@ -69,47 +66,24 @@ docker pull ghcr.io/f5gov/nginx-webssh2:latest
 
 ## Triggering Builds
 
-### Automatic Triggers
+### Automated Flow
 
-1. **Every push to main**:
-
-   ```bash
-   git push origin main
-   # Automatically builds and tags as 'latest'
-   ```
-
-2. **Creating a version tag**:
-
-   ```bash
-   git tag v1.0.0
-   git push origin v1.0.0
-   # Creates v1.0.0, v1.0, v1, and latest tags
-   ```
-
-3. **Creating a release**:
-   - Go to GitHub Releases
-   - Click "Create a new release"
-   - Choose a tag (e.g., v1.0.0)
-   - Publish release
-   - Workflow automatically runs
+1. WebSSH2 publishes a release → the upstream workflow sends `repository_dispatch:webssh2-release` to this repo.
+2. `sync-webssh2-release.yml` runs release-please with `release-as=<webssh2 version>` and opens a release PR.
+3. Merge the release PR after review.
+4. The push to `main` triggers `release-please.yml`, which turns the merged PR into a GitHub Release (tag `vX.Y.Z`).
+5. The `release` event fires `publish.yml`, which downloads the matching WebSSH2 artifact, builds multi-arch images, and pushes them to GHCR.
 
 ### Manual Trigger
 
-1. Go to Actions tab in GitHub
-2. Select "Build and Publish Docker Image" workflow
-3. Click "Run workflow"
-4. Choose branch and whether to publish
-5. Click "Run workflow" button
+- Use the **Build and Publish Docker Image** workflow → **Run workflow**.
+- Supply the WebSSH2 version you want to publish (e.g., `2.4.0`) and set `publish` to `true` to push images.
 
 ## Workflow Features
 
 ### Security Scanning
 
-Every build includes:
-
-- **Trivy vulnerability scanning** - Scans for CVEs and security issues
-- **SARIF upload** - Results appear in GitHub Security tab
-- **Build attestations** - Cryptographic proof of build provenance
+Security scanning is currently disabled in the publish workflow. Run Trivy or another scanner ad hoc if you require a vulnerability report before promoting an image.
 
 ### Build Caching
 
@@ -117,13 +91,10 @@ Every build includes:
 - Docker layer caching enabled
 - Multi-stage build optimization
 
-### Submodule Support
+### WebSSH2 Artifact Handling
 
-The workflow automatically:
-
-- Checks out the repository with `--recursive`
-- Fetches the webssh2 submodule from the `newmain` branch
-- Includes all submodule content in the build
+- `sync-webssh2-release.yml` records the upstream WebSSH2 version in `WEBSSH2_VERSION` via release-please.
+- `publish.yml` calls `scripts/fetch-webssh2-release.sh` to download the release tarball and verify its checksum before building the image.
 
 ## Monitoring Builds
 
@@ -158,9 +129,9 @@ Check the Security tab for:
 
 Common issues and solutions:
 
-1. **Submodule not found**:
-   - Ensure `.gitmodules` is committed
-   - Check submodule branch is `newmain`
+1. **Artifact download failed**:
+   - Ensure `GITHUB_TOKEN` (or a PAT) is available for private releases
+   - Confirm the upstream release published `webssh2-<version>.tar.gz` and `.sha256`
 
 2. **Permission denied pushing**:
    - Workflow has correct permissions set
@@ -175,9 +146,11 @@ Common issues and solutions:
 Before pushing, test the build:
 
 ```bash
-# Clone with submodules
-git clone --recursive https://github.com/f5gov/nginx-webssh2.git
+git clone https://github.com/f5gov/nginx-webssh2.git
 cd nginx-webssh2
+
+# Pull the WebSSH2 artifact referenced in WEBSSH2_VERSION
+./scripts/fetch-webssh2-release.sh "$(cat WEBSSH2_VERSION)"
 
 # Test build
 docker build -t nginx-webssh2:test .

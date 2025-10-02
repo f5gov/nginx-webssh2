@@ -4,7 +4,7 @@
 services:
   nginx-webssh2:
     build:
-      context: .  # Build from current directory with webssh2 as submodule
+      context: .  # Build context expects vendor/webssh2 populated from release artifact
       dockerfile: Dockerfile
     image: nginx-webssh2:latest
     container_name: nginx-webssh2
