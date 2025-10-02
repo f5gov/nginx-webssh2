@@ -270,7 +270,7 @@ WEBSSH2_SSO_HEADER_PASSWORD=x-apm-password
 WEBSSH2_SSO_HEADER_SESSION=x-apm-session
 ```
 
-For complete configuration options, see [`.env.example`](.env.example).
+For the full catalog of environment variables, start with [`webssh2/DOCS/configuration/ENVIRONMENT-VARIABLES.md`](webssh2/DOCS/configuration/ENVIRONMENT-VARIABLES.md) and tailor values in [`.env.example`](.env.example).
 
 ## 🚀 Quick Start Examples
 
