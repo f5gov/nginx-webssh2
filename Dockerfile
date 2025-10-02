@@ -9,6 +9,7 @@ COPY ./webssh2/package*.json ./
 COPY ./webssh2/tsconfig*.json ./
 COPY ./webssh2/index.ts ./
 COPY ./webssh2/app/ ./app/
+COPY ./webssh2/scripts/ ./scripts/
 COPY ./webssh2/types/ ./types/
 
 # Install ALL dependencies (including dev) and build
