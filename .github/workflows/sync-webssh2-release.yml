@@ -41,7 +41,7 @@ jobs:
           echo "Container release version: ${VERSION}" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Open release PR
-        uses: google-github-actions/release-please-action@v4
+        uses: googleapis/release-please-action@v4
         with:
           command: release-pr
           release-as: ${{ steps.version.outputs.version }}
