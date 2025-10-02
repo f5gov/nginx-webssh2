@@ -8,10 +8,10 @@ if [[ -f /etc/webssh2-env ]]; then
     source /etc/webssh2-env
 fi
 
-# Enable debug logging if not already set
-if [[ -z "${DEBUG}" ]]; then
-    export DEBUG="webssh2:*"
-fi
+# Only enable debug logging if DEBUG env variable is provided
+# if [[ -z "${DEBUG}" ]]; then
+#     export DEBUG="webssh2:*"
+# fi
 
 # Create log file if it doesn't exist
 touch /var/log/webssh2/webssh2.log
