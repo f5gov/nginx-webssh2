@@ -118,6 +118,7 @@ jobs:
             webssh2.version=${{ steps.context.outputs.version }}
 
       - name: Build and (optionally) push Docker image
+        id: build
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -132,6 +133,43 @@ jobs:
             BUILD_VERSION=${{ steps.context.outputs.version }}
             WEBSSH2_VERSION=${{ steps.context.outputs.version }}
             VCS_REF=${{ github.sha }}
+
+      - name: Update release notes with Docker images
+        if: github.event_name == 'release' && steps.context.outputs.publish == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: v${{ steps.context.outputs.version }}
+          SEMVER_FULL: ${{ steps.context.outputs.version }}
+          SEMVER_MINOR: ${{ steps.context.outputs.major }}.${{ steps.context.outputs.minor }}
+          SEMVER_MAJOR: ${{ steps.context.outputs.major }}
+          IMAGE_DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          # Get current release body
+          CURRENT_BODY=$(gh release view "$RELEASE_TAG" --json body --jq '.body')
+
+          # Create Docker images section
+          DOCKER_SECTION="
+
+          ## 🐳 Docker Images
+
+          This release is available as multi-platform images (linux/amd64, linux/arm64):
+
+          ### GitHub Container Registry
+          \`\`\`bash
+          docker pull ghcr.io/f5gov/nginx-webssh2:latest
+          docker pull ghcr.io/f5gov/nginx-webssh2:${SEMVER_FULL}
+          docker pull ghcr.io/f5gov/nginx-webssh2:${SEMVER_MINOR}
+          docker pull ghcr.io/f5gov/nginx-webssh2:${SEMVER_MAJOR}
+          \`\`\`
+
+          **Image Digest:** \`${IMAGE_DIGEST}\`
+
+          **Links:**
+          - [GitHub Container Registry](https://github.com/f5gov/nginx-webssh2/pkgs/container/nginx-webssh2)
+          "
+
+          # Append Docker section to release notes
+          gh release edit "$RELEASE_TAG" --notes "${CURRENT_BODY}${DOCKER_SECTION}"
 
       - name: Summarize build outcome
         run: |
