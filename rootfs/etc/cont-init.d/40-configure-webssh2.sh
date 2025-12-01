@@ -143,6 +143,10 @@ fi
 
 echo "[WebSSH2] ✓ Configuration validation passed"
 
+# Persist environment variables to /etc/webssh2-env for s6 services
+echo "[WebSSH2] Persisting environment variables..."
+/usr/local/bin/export-env.sh
+
 echo "[WebSSH2] WebSSH2 configuration completed successfully"
 
 # Output configuration summary
