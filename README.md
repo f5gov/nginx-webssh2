@@ -236,6 +236,35 @@ NGINX_RATE_LIMIT_BURST=20    # Burst size
 NGINX_CONN_LIMIT=100         # Connection limit per IP
 ```
 
+### NGINX Performance Tuning
+
+```bash
+# Worker Configuration
+NGINX_WORKER_PROCESSES=auto      # Number of worker processes (default: auto)
+NGINX_WORKER_CONNECTIONS=1024    # Max connections per worker (default: 1024)
+NGINX_KEEPALIVE_TIMEOUT=65       # Keepalive timeout in seconds (default: 65)
+
+# Client Settings
+NGINX_CLIENT_MAX_BODY_SIZE=1m    # Max request body size (default: 1m)
+
+# Proxy Timeouts
+NGINX_PROXY_READ_TIMEOUT=3600s   # Proxy read timeout (default: 3600s)
+NGINX_PROXY_SEND_TIMEOUT=3600s   # Proxy send timeout (default: 3600s)
+
+# Network Configuration
+NGINX_LISTEN_IPV6=true           # Enable IPv6 support (default: true)
+                                 # Set to false if host doesn't support IPv6
+
+# Compression
+NGINX_GZIP=on                    # Enable gzip compression (default: on)
+
+# Logging
+NGINX_ACCESS_LOG=off             # Enable access logs (default: off)
+NGINX_ERROR_LOG_LEVEL=warn       # Error log level (default: warn)
+```
+
+**Note**: If you encounter the error `socket() [::]:443 failed (97: Address family not supported by protocol)`, set `NGINX_LISTEN_IPV6=false` to disable IPv6.
+
 ### WebSSH2 Configuration
 
 ```bash

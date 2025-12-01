@@ -31,7 +31,7 @@ process_template() {
     echo "[NGINX] Processing template: ${template_file} -> ${output_file}"
     
     # Use envsubst with specific variable list to avoid substituting nginx variables
-    envsubst '$NGINX_WORKER_PROCESSES $NGINX_WORKER_CONNECTIONS $NGINX_KEEPALIVE_TIMEOUT $NGINX_CLIENT_MAX_BODY_SIZE $NGINX_PROXY_READ_TIMEOUT $NGINX_PROXY_SEND_TIMEOUT $NGINX_RATE_LIMIT $NGINX_RATE_LIMIT_BURST $NGINX_CONN_LIMIT $NGINX_GZIP $NGINX_ERROR_LOG_LEVEL $NGINX_SERVER_NAME $NGINX_LISTEN_PORT $WEBSSH2_LISTEN_PORT $TLS_CERT_PATH $TLS_KEY_PATH $SECURITY_HEADERS $HSTS_MAX_AGE $CSP_POLICY' < "${template_file}" > "${output_file}"
+    envsubst '$NGINX_WORKER_PROCESSES $NGINX_WORKER_CONNECTIONS $NGINX_KEEPALIVE_TIMEOUT $NGINX_CLIENT_MAX_BODY_SIZE $NGINX_PROXY_READ_TIMEOUT $NGINX_PROXY_SEND_TIMEOUT $NGINX_RATE_LIMIT $NGINX_RATE_LIMIT_BURST $NGINX_CONN_LIMIT $NGINX_GZIP $NGINX_ERROR_LOG_LEVEL $NGINX_SERVER_NAME $NGINX_LISTEN_PORT $NGINX_IPV6_LISTEN $WEBSSH2_LISTEN_PORT $TLS_CERT_PATH $TLS_KEY_PATH $SECURITY_HEADERS $HSTS_MAX_AGE $CSP_POLICY' < "${template_file}" > "${output_file}"
     
     # Validate the resulting configuration (only for main nginx.conf)
     if [[ "${output_file}" == "/etc/nginx/nginx.conf" ]]; then
@@ -57,6 +57,16 @@ export NGINX_CONN_LIMIT=${NGINX_CONN_LIMIT:-100}
 export NGINX_GZIP=${NGINX_GZIP:-on}
 export NGINX_ERROR_LOG_LEVEL=${NGINX_ERROR_LOG_LEVEL:-warn}
 export NGINX_SERVER_NAME=${NGINX_SERVER_NAME:-_}
+export NGINX_LISTEN_IPV6=${NGINX_LISTEN_IPV6:-true}
+
+# Configure IPv6 listen directive based on NGINX_LISTEN_IPV6
+if [[ "${NGINX_LISTEN_IPV6}" == "true" ]]; then
+    export NGINX_IPV6_LISTEN="listen [::]:${NGINX_LISTEN_PORT:-443} ssl default_server;"
+    echo "[NGINX] IPv6 support enabled"
+else
+    export NGINX_IPV6_LISTEN="# IPv6 disabled via NGINX_LISTEN_IPV6=false"
+    echo "[NGINX] IPv6 support disabled"
+fi
 
 # Security headers configuration
 export SECURITY_HEADERS=${SECURITY_HEADERS:-true}

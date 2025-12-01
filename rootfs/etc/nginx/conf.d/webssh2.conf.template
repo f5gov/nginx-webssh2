@@ -11,7 +11,7 @@ upstream webssh2_backend {
 # HTTPS server - main WebSSH2 service (HTTPS only, no HTTP redirect)
 server {
     listen ${NGINX_LISTEN_PORT} ssl default_server;
-    listen [::]:${NGINX_LISTEN_PORT} ssl default_server;
+    ${NGINX_IPV6_LISTEN}
     http2 on;
     server_name ${NGINX_SERVER_NAME};
     

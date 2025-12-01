@@ -144,8 +144,15 @@ RUN find /etc/cont-init.d -name "*.sh" -exec chmod +x {} \; && \
     find /usr/local/bin -name "*.sh" -exec chmod +x {} \; && \
     chmod +x /etc/cont-init.d/* /usr/local/bin/* && \
     echo '#!/bin/bash' > /usr/local/bin/export-env.sh && \
-    echo '# Export all WebSSH2 related environment variables' >> /usr/local/bin/export-env.sh && \
-    echo 'env | grep -E "^(NGINX_|WEBSSH2_|TLS_|SECURITY_|HSTS_|CSP_|FIPS_|MTLS_|DEBUG)" | while IFS= read -r line; do echo "export ${line%%=*}=\"${line#*=}\""; done > /etc/webssh2-env' >> /usr/local/bin/export-env.sh && \
+    echo '# Export all WebSSH2 related environment variables (skip empty values)' >> /usr/local/bin/export-env.sh && \
+    echo 'env | grep -E "^(NGINX_|WEBSSH2_|TLS_|SECURITY_|HSTS_|CSP_|FIPS_|MTLS_|DEBUG)" | while IFS= read -r line; do' >> /usr/local/bin/export-env.sh && \
+    echo '  key="${line%%=*}"' >> /usr/local/bin/export-env.sh && \
+    echo '  value="${line#*=}"' >> /usr/local/bin/export-env.sh && \
+    echo '  # Only export if value is not empty' >> /usr/local/bin/export-env.sh && \
+    echo '  if [[ -n "$value" ]]; then' >> /usr/local/bin/export-env.sh && \
+    echo '    echo "export $key=\"$value\""' >> /usr/local/bin/export-env.sh && \
+    echo '  fi' >> /usr/local/bin/export-env.sh && \
+    echo 'done > /etc/webssh2-env' >> /usr/local/bin/export-env.sh && \
     chmod +x /usr/local/bin/export-env.sh
 
 # Set default environment variables
