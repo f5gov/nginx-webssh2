@@ -8,12 +8,12 @@ A production-ready Docker container combining NGINX and WebSSH2 with FIPS 140-3 
 
 ```bash
 # Pull the latest release
-docker pull ghcr.io/f5gov/nginx-webssh2:latest
+docker pull ghcr.io/F5GovSolutions/nginx-webssh2:latest
 
 # Run the container (WEBSSH2_SESSION_SECRET is required)
 docker run -d -p 443:443 --name nginx-webssh2 \
   -e WEBSSH2_SESSION_SECRET="$(openssl rand -base64 32)" \
-  ghcr.io/f5gov/nginx-webssh2:latest
+  ghcr.io/F5GovSolutions/nginx-webssh2:latest
 
 # Access WebSSH2 at https://localhost
 ```
@@ -22,12 +22,12 @@ docker run -d -p 443:443 --name nginx-webssh2 \
 
 ```bash
 # Pull the latest release
-podman pull ghcr.io/f5gov/nginx-webssh2:latest
+podman pull ghcr.io/F5GovSolutions/nginx-webssh2:latest
 
 # Run the container (WEBSSH2_SESSION_SECRET is required)
 podman run -d -p 443:443 --name nginx-webssh2 \
   -e WEBSSH2_SESSION_SECRET="$(openssl rand -base64 32)" \
-  ghcr.io/f5gov/nginx-webssh2:latest
+  ghcr.io/F5GovSolutions/nginx-webssh2:latest
 
 # Using podman-compose (same as docker-compose.yml)
 podman-compose up -d
@@ -114,7 +114,7 @@ docker run -d \
   -e TLS_MODE=provided \
   -e TLS_CERT_CONTENT="$TLS_CERT_CONTENT" \
   -e TLS_KEY_CONTENT="$TLS_KEY_CONTENT" \
-  ghcr.io/f5gov/nginx-webssh2:latest
+  ghcr.io/F5GovSolutions/nginx-webssh2:latest
 ```
 
 ##### HashiCorp Vault
@@ -129,7 +129,7 @@ docker run -d \
   -e TLS_MODE=provided \
   -e TLS_CERT_CONTENT="$TLS_CERT_CONTENT" \
   -e TLS_KEY_CONTENT="$TLS_KEY_CONTENT" \
-  ghcr.io/f5gov/nginx-webssh2:latest
+  ghcr.io/F5GovSolutions/nginx-webssh2:latest
 ```
 
 ##### Azure Key Vault
@@ -150,7 +150,7 @@ docker run -d \
   -e TLS_MODE=provided \
   -e TLS_CERT_CONTENT="$TLS_CERT_CONTENT" \
   -e TLS_KEY_CONTENT="$TLS_KEY_CONTENT" \
-  ghcr.io/f5gov/nginx-webssh2:latest
+  ghcr.io/F5GovSolutions/nginx-webssh2:latest
 ```
 
 ##### 1Password CLI
@@ -164,7 +164,7 @@ docker run -d \
   -e TLS_MODE=provided \
   -e TLS_CERT_CONTENT="$TLS_CERT_CONTENT" \
   -e TLS_KEY_CONTENT="$TLS_KEY_CONTENT" \
-  ghcr.io/f5gov/nginx-webssh2:latest
+  ghcr.io/F5GovSolutions/nginx-webssh2:latest
 ```
 
 #### Method 4: Docker/Kubernetes Native Secrets
@@ -183,7 +183,7 @@ docker service create \
   -e TLS_MODE=provided \
   -e TLS_CERT_PATH=/run/secrets/tls_cert \
   -e TLS_KEY_PATH=/run/secrets/tls_key \
-  ghcr.io/f5gov/nginx-webssh2:latest
+  ghcr.io/F5GovSolutions/nginx-webssh2:latest
 ```
 
 ##### Kubernetes Secrets
@@ -444,7 +444,7 @@ For additional details, see the upstream [WebSSH2 configuration reference](https
 # Simplest setup - session secret is required
 docker run -d -p 443:443 \
   -e WEBSSH2_SESSION_SECRET="$(openssl rand -base64 32)" \
-  ghcr.io/f5gov/nginx-webssh2:latest
+  ghcr.io/F5GovSolutions/nginx-webssh2:latest
 ```
 
 ### Production with Persistent Sessions
@@ -454,7 +454,7 @@ docker run -d -p 443:443 \
 # Store this value securely and reuse it across deployments
 docker run -d -p 443:443 \
   -e WEBSSH2_SESSION_SECRET="your-persistent-secret-here" \
-  ghcr.io/f5gov/nginx-webssh2:latest
+  ghcr.io/F5GovSolutions/nginx-webssh2:latest
 ```
 
 ### Production with Provided Certificates
@@ -466,7 +466,7 @@ docker run -d -p 443:443 \
   -e TLS_MODE=provided \
   -e FIPS_MODE=enabled \
   -v /path/to/certs:/etc/nginx/certs:ro \
-  ghcr.io/f5gov/nginx-webssh2:latest
+  ghcr.io/F5GovSolutions/nginx-webssh2:latest
 
 # Using environment variables from secrets manager
 docker run -d -p 443:443 \
@@ -475,7 +475,7 @@ docker run -d -p 443:443 \
   -e TLS_CERT_CONTENT="$TLS_CERT_CONTENT" \
   -e TLS_KEY_CONTENT="$TLS_KEY_CONTENT" \
   -e FIPS_MODE=enabled \
-  ghcr.io/f5gov/nginx-webssh2:latest
+  ghcr.io/F5GovSolutions/nginx-webssh2:latest
 ```
 
 ### With Specific SSH Target
@@ -485,7 +485,7 @@ docker run -d -p 443:443 \
   -e WEBSSH2_SESSION_SECRET="$(openssl rand -base64 32)" \
   -e WEBSSH2_SSH_HOST=ssh.example.com \
   -e WEBSSH2_SSH_PORT=22 \
-  ghcr.io/f5gov/nginx-webssh2:latest
+  ghcr.io/F5GovSolutions/nginx-webssh2:latest
 ```
 
 ## 🏗️ Architecture
@@ -543,7 +543,7 @@ version: '3.8'
 
 services:
   nginx-webssh2:
-    image: ghcr.io/f5gov/nginx-webssh2:latest
+    image: ghcr.io/F5GovSolutions/nginx-webssh2:latest
     ports:
       - "443:443"
     environment:
@@ -563,7 +563,7 @@ version: '3.8'
 
 services:
   nginx-webssh2:
-    image: ghcr.io/f5gov/nginx-webssh2:latest
+    image: ghcr.io/F5GovSolutions/nginx-webssh2:latest
     ports:
       - "443:443"
     environment:
@@ -614,7 +614,7 @@ spec:
     spec:
       containers:
       - name: nginx-webssh2
-        image: ghcr.io/f5gov/nginx-webssh2:latest
+        image: ghcr.io/F5GovSolutions/nginx-webssh2:latest
         ports:
         - containerPort: 443
         env:
@@ -651,7 +651,7 @@ spec:
     spec:
       containers:
       - name: nginx-webssh2
-        image: ghcr.io/f5gov/nginx-webssh2:latest
+        image: ghcr.io/F5GovSolutions/nginx-webssh2:latest
         ports:
         - containerPort: 443
           protocol: TCP
@@ -750,7 +750,7 @@ oc create secret generic webssh2-secret \
   --from-literal=session-secret="$(openssl rand -base64 32)"
 
 # Deploy using oc new-app
-oc new-app ghcr.io/f5gov/nginx-webssh2:latest \
+oc new-app ghcr.io/F5GovSolutions/nginx-webssh2:latest \
   --name=nginx-webssh2 \
   -e WEBSSH2_SESSION_SECRET="$(openssl rand -base64 32)" \
   -e TLS_MODE=provided \
@@ -788,13 +788,13 @@ docker exec nginx-webssh2 /usr/local/bin/healthcheck.sh
 docker run -d -p 443:443 \
   -e WEBSSH2_SESSION_SECRET="$(openssl rand -base64 32)" \
   -e NGINX_ACCESS_LOG=on \
-  ghcr.io/f5gov/nginx-webssh2:latest
+  ghcr.io/F5GovSolutions/nginx-webssh2:latest
 
 # To enable WebSSH2 debug logging:
 docker run -d -p 443:443 \
   -e WEBSSH2_SESSION_SECRET="$(openssl rand -base64 32)" \
   -e DEBUG="webssh2:*" \
-  ghcr.io/f5gov/nginx-webssh2:latest
+  ghcr.io/F5GovSolutions/nginx-webssh2:latest
 
 # Or enable specific debug namespaces:
 # DEBUG="webssh2:socket,webssh2:ssh,webssh2:config"
