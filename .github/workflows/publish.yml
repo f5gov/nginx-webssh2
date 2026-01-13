@@ -143,30 +143,35 @@ jobs:
           SEMVER_MINOR: ${{ steps.context.outputs.major }}.${{ steps.context.outputs.minor }}
           SEMVER_MAJOR: ${{ steps.context.outputs.major }}
           IMAGE_DIGEST: ${{ steps.build.outputs.digest }}
+          IMAGE_NAME_LOWER: ${{ env.IMAGE_NAME }}
         run: |
           # Get current release body
           CURRENT_BODY=$(gh release view "$RELEASE_TAG" --json body --jq '.body')
 
-          # Create Docker images section
-          DOCKER_SECTION="
+          # Lowercase the image name for GHCR compatibility
+          IMAGE_NAME_LOWER=$(echo "$IMAGE_NAME_LOWER" | tr '[:upper:]' '[:lower:]')
 
-          ## 🐳 Docker Images
+          # Create Docker images section using heredoc to avoid whitespace issues
+          DOCKER_SECTION=$(cat <<EOF
 
-          This release is available as multi-platform images (linux/amd64, linux/arm64):
+## 🐳 Docker Images
 
-          ### GitHub Container Registry
-          \`\`\`bash
-          docker pull ghcr.io/F5GovSolutions/nginx-webssh2:latest
-          docker pull ghcr.io/F5GovSolutions/nginx-webssh2:${SEMVER_FULL}
-          docker pull ghcr.io/F5GovSolutions/nginx-webssh2:${SEMVER_MINOR}
-          docker pull ghcr.io/F5GovSolutions/nginx-webssh2:${SEMVER_MAJOR}
-          \`\`\`
+This release is available as multi-platform images (linux/amd64, linux/arm64):
 
-          **Image Digest:** \`${IMAGE_DIGEST}\`
+### GitHub Container Registry
+\`\`\`bash
+docker pull ghcr.io/${IMAGE_NAME_LOWER}:latest
+docker pull ghcr.io/${IMAGE_NAME_LOWER}:${SEMVER_FULL}
+docker pull ghcr.io/${IMAGE_NAME_LOWER}:${SEMVER_MINOR}
+docker pull ghcr.io/${IMAGE_NAME_LOWER}:${SEMVER_MAJOR}
+\`\`\`
 
-          **Links:**
-          - [GitHub Container Registry](https://github.com/F5GovSolutions/nginx-webssh2/pkgs/container/nginx-webssh2)
-          "
+**Image Digest:** \`${IMAGE_DIGEST}\`
+
+**Links:**
+- [GitHub Container Registry](https://github.com/F5GovSolutions/nginx-webssh2/pkgs/container/nginx-webssh2)
+EOF
+          )
 
           # Append Docker section to release notes
           gh release edit "$RELEASE_TAG" --notes "${CURRENT_BODY}${DOCKER_SECTION}"
