@@ -11,7 +11,7 @@ on:
       publish:
         description: 'Push to GHCR'
         required: false
-        default: 'false'
+        default: 'true'
         type: choice
         options:
           - 'true'
@@ -111,7 +111,7 @@ jobs:
           labels: |
             org.opencontainers.image.title=NGINX WebSSH2
             org.opencontainers.image.description=Production-ready NGINX + WebSSH2 container with FIPS 140-2 support
-            org.opencontainers.image.vendor=F5GovSolutions
+            org.opencontainers.image.vendor=f5govsolutions
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
             org.opencontainers.image.documentation=${{ github.server_url }}/${{ github.repository }}/blob/main/README.md
             org.opencontainers.image.licenses=MIT
@@ -143,35 +143,30 @@ jobs:
           SEMVER_MINOR: ${{ steps.context.outputs.major }}.${{ steps.context.outputs.minor }}
           SEMVER_MAJOR: ${{ steps.context.outputs.major }}
           IMAGE_DIGEST: ${{ steps.build.outputs.digest }}
-          IMAGE_NAME_LOWER: ${{ env.IMAGE_NAME }}
         run: |
           # Get current release body
           CURRENT_BODY=$(gh release view "$RELEASE_TAG" --json body --jq '.body')
 
-          # Lowercase the image name for GHCR compatibility
-          IMAGE_NAME_LOWER=$(echo "$IMAGE_NAME_LOWER" | tr '[:upper:]' '[:lower:]')
+          # Create Docker images section
+          DOCKER_SECTION="
 
-          # Create Docker images section using heredoc to avoid whitespace issues
-          DOCKER_SECTION=$(cat <<EOF
+          ## 🐳 Docker Images
 
-## 🐳 Docker Images
+          This release is available as multi-platform images (linux/amd64, linux/arm64):
 
-This release is available as multi-platform images (linux/amd64, linux/arm64):
+          ### GitHub Container Registry
+          \`\`\`bash
+          docker pull ghcr.io/f5govsolutions/nginx-webssh2:latest
+          docker pull ghcr.io/f5govsolutions/nginx-webssh2:${SEMVER_FULL}
+          docker pull ghcr.io/f5govsolutions/nginx-webssh2:${SEMVER_MINOR}
+          docker pull ghcr.io/f5govsolutions/nginx-webssh2:${SEMVER_MAJOR}
+          \`\`\`
 
-### GitHub Container Registry
-\`\`\`bash
-docker pull ghcr.io/${IMAGE_NAME_LOWER}:latest
-docker pull ghcr.io/${IMAGE_NAME_LOWER}:${SEMVER_FULL}
-docker pull ghcr.io/${IMAGE_NAME_LOWER}:${SEMVER_MINOR}
-docker pull ghcr.io/${IMAGE_NAME_LOWER}:${SEMVER_MAJOR}
-\`\`\`
+          **Image Digest:** \`${IMAGE_DIGEST}\`
 
-**Image Digest:** \`${IMAGE_DIGEST}\`
-
-**Links:**
-- [GitHub Container Registry](https://github.com/F5GovSolutions/nginx-webssh2/pkgs/container/nginx-webssh2)
-EOF
-          )
+          **Links:**
+          - [GitHub Container Registry](https://github.com/f5govsolutions/nginx-webssh2/pkgs/container/nginx-webssh2)
+          "
 
           # Append Docker section to release notes
           gh release edit "$RELEASE_TAG" --notes "${CURRENT_BODY}${DOCKER_SECTION}"
