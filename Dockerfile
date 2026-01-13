@@ -1,5 +1,17 @@
-# Multi-stage build for TypeScript compilation
-# Stage 1: Build WebSSH2 TypeScript
+# Multi-stage build for TypeScript compilation and s6-overlay extraction
+# Stage 1: Extract s6-overlay (Alpine handles QEMU better than UBI9)
+FROM alpine:3.20 AS s6-builder
+
+ARG TARGETARCH
+ENV S6_OVERLAY_VERSION=3.1.6.2
+
+RUN apk add --no-cache curl xz && \
+    S6_ARCH=$(case "$TARGETARCH" in amd64) echo "x86_64";; arm64) echo "aarch64";; *) echo "$TARGETARCH";; esac) && \
+    mkdir -p /s6-root && \
+    curl -L "https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-noarch.tar.xz" | xz -d | tar -C /s6-root -xf - && \
+    curl -L "https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-${S6_ARCH}.tar.xz" | xz -d | tar -C /s6-root -xf -
+
+# Stage 2: Build WebSSH2 TypeScript
 FROM node:22-alpine AS builder
 
 ARG WEBSSH2_VERSION
@@ -98,24 +110,9 @@ RUN curl -fsSL https://rpm.nodesource.com/setup_22.x | bash - && \
     microdnf clean all
 
 # Install s6-overlay for process supervision
-# Determine architecture and download appropriate binary
-# Note: ARM64 uses piped xz|tar to work around QEMU emulation issues in CI
-# (QEMU can't handle tar's integrated -J decompression for symlinks/mkdir)
-RUN ARCH=$(uname -m) && \
-    if [ "$ARCH" = "x86_64" ]; then \
-        S6_ARCH="x86_64"; \
-    elif [ "$ARCH" = "aarch64" ]; then \
-        S6_ARCH="aarch64"; \
-    else \
-        echo "Unsupported architecture: $ARCH" && exit 1; \
-    fi && \
-    curl -L -o /tmp/s6-overlay-noarch.tar.xz \
-        https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-noarch.tar.xz && \
-    curl -L -o /tmp/s6-overlay-${S6_ARCH}.tar.xz \
-        https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-${S6_ARCH}.tar.xz && \
-    xz -dc /tmp/s6-overlay-noarch.tar.xz | tar -C / -xpf - && \
-    xz -dc /tmp/s6-overlay-${S6_ARCH}.tar.xz | tar -C / -xpf - && \
-    rm /tmp/s6-overlay-*.tar.xz
+# Copy pre-extracted s6-overlay from Alpine builder stage
+# (Alpine's BusyBox tar handles QEMU emulation better than GNU tar on UBI9)
+COPY --from=s6-builder /s6-root/ /
 
 # Create users, groups, and directories
 RUN groupadd --gid 1001 webssh2 && \
