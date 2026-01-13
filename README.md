@@ -267,39 +267,174 @@ NGINX_ERROR_LOG_LEVEL=warn       # Error log level (default: warn)
 
 ### WebSSH2 Configuration
 
+#### Listen Settings
+
 ```bash
-# Interface and Port
-WEBSSH2_LISTEN_IP=127.0.0.1
-WEBSSH2_LISTEN_PORT=2222
+WEBSSH2_LISTEN_IP=127.0.0.1      # IP address to listen on (default: 127.0.0.1)
+WEBSSH2_LISTEN_PORT=2222         # Port to listen on (default: 2222)
+PORT=2222                        # Legacy port variable (maps to WEBSSH2_LISTEN_PORT)
+```
 
-# SSH Settings
-WEBSSH2_SSH_TERM=xterm-256color
-WEBSSH2_SSH_ALGORITHMS_PRESET=modern
-WEBSSH2_SESSION_NAME=webssh2.sid
+#### SSH Connection Settings
 
-# CORS Settings
-WEBSSH2_HTTP_ORIGINS=https://webssh2.example.com:443
+```bash
+# Target SSH Server
+WEBSSH2_SSH_HOST=                # Target SSH host (empty for dynamic selection)
+WEBSSH2_SSH_PORT=22              # Target SSH port (default: 22)
+WEBSSH2_SSH_TERM=xterm-256color  # Terminal emulation type (default: xterm-256color)
+
+# Local Binding (optional)
+WEBSSH2_SSH_LOCAL_ADDRESS=       # Local address to bind for SSH connection
+WEBSSH2_SSH_LOCAL_PORT=          # Local port to bind for SSH connection
+
+# Timeouts and Keepalive
+WEBSSH2_SSH_READY_TIMEOUT=20000         # SSH connection ready timeout in ms (default: 20000)
+WEBSSH2_SSH_KEEPALIVE_INTERVAL=120000   # Keepalive interval in ms (default: 120000)
+WEBSSH2_SSH_KEEPALIVE_COUNT_MAX=10      # Max keepalive count before disconnect (default: 10)
+```
+
+#### SSH Algorithm Configuration
+
+```bash
+# Algorithm Preset (recommended approach)
+WEBSSH2_SSH_ALGORITHMS_PRESET=modern    # Preset: modern, legacy, or strict (default: modern)
+
+# Custom Algorithms (override preset - comma-separated or JSON array)
+WEBSSH2_SSH_ALGORITHMS_CIPHER=          # Cipher algorithms (e.g., aes256-gcm@openssh.com,aes128-gcm@openssh.com)
+WEBSSH2_SSH_ALGORITHMS_KEX=             # Key exchange algorithms
+WEBSSH2_SSH_ALGORITHMS_HMAC=            # HMAC algorithms
+WEBSSH2_SSH_ALGORITHMS_COMPRESS=        # Compression algorithms
+WEBSSH2_SSH_ALGORITHMS_SERVER_HOST_KEY= # Server host key algorithms
+```
+
+**Algorithm Presets:**
+- `modern` - AES-GCM, ECDH, SHA2, modern ciphers (recommended)
+- `legacy` - AES-CBC, DH groups, SHA1, older ciphers (for compatibility)
+- `strict` - Most restrictive, ECDH only, AES256-GCM only (highest security)
+
+#### SSH Authentication
+
+```bash
+# Pre-configured Credentials (optional - for kiosk/fixed-target deployments)
+WEBSSH2_USER_NAME=               # Pre-configured SSH username
+WEBSSH2_USER_PASSWORD=           # Pre-configured SSH password
+WEBSSH2_USER_PRIVATE_KEY=        # Pre-configured SSH private key (PEM format)
+WEBSSH2_USER_PASSPHRASE=         # Passphrase for encrypted private key
+
+# Allowed Authentication Methods (comma-separated)
+WEBSSH2_AUTH_ALLOWED=password,keyboard-interactive,publickey
+```
+
+#### SSH Behavior
+
+```bash
+WEBSSH2_SSH_ALWAYS_SEND_KEYBOARD_INTERACTIVE=false  # Always send keyboard-interactive prompts
+WEBSSH2_SSH_DISABLE_INTERACTIVE_AUTH=false          # Disable interactive authentication
+WEBSSH2_SSH_ENV_ALLOWLIST=                          # Environment variables to pass to SSH (comma-separated)
+WEBSSH2_SSH_ALLOWED_SUBNETS=                        # CIDR subnets allowed for SSH (comma-separated)
+WEBSSH2_SSH_MAX_EXEC_OUTPUT_BYTES=10485760          # Max bytes for command execution (default: 10MB)
+WEBSSH2_SSH_OUTPUT_RATE_LIMIT_BYTES_PER_SEC=0       # Output rate limit (0 = unlimited)
+WEBSSH2_SSH_SOCKET_HIGH_WATER_MARK=16384            # Socket high water mark (default: 16KB)
+```
+
+#### Session Configuration
+
+```bash
+WEBSSH2_SESSION_SECRET=          # REQUIRED: Session encryption secret (generate with: openssl rand -base64 32)
+WEBSSH2_SESSION_NAME=webssh2.sid # Session cookie name (default: webssh2.sid)
+```
+
+#### UI Header Configuration
+
+```bash
+WEBSSH2_HEADER_TEXT=             # Custom header text displayed in terminal
+WEBSSH2_HEADER_BACKGROUND=green  # Header background color (default: green)
+```
+
+#### UI Options
+
+```bash
+WEBSSH2_OPTIONS_CHALLENGE_BUTTON=true   # Show challenge/response button (default: true)
+WEBSSH2_OPTIONS_AUTO_LOG=false          # Automatically log SSH sessions (default: false)
+WEBSSH2_OPTIONS_ALLOW_REAUTH=true       # Allow re-authentication during session (default: true)
+WEBSSH2_OPTIONS_ALLOW_RECONNECT=true    # Allow reconnection to SSH server (default: true)
+WEBSSH2_OPTIONS_ALLOW_REPLAY=true       # Allow session replay (default: true)
+WEBSSH2_OPTIONS_REPLAY_CRLF=false       # Convert LF to CRLF during replay (default: false)
+```
+
+#### CORS Configuration
+
+```bash
+WEBSSH2_HTTP_ORIGINS=            # Allowed CORS origins (comma-separated or JSON array)
+                                 # Example: https://webssh2.example.com:443,https://backup.example.com
+                                 # Default: *:* (all origins - restrict in production)
 ```
 
 ### SSO Configuration
 
 ```bash
 # Enable SSO for enterprise authentication
-WEBSSH2_SSO_ENABLED=false
+WEBSSH2_SSO_ENABLED=false                    # Enable SSO authentication (default: false)
+WEBSSH2_SSO_CSRF_PROTECTION=false            # Enable CSRF protection for SSO (default: false)
+WEBSSH2_SSO_TRUSTED_PROXIES=                 # Trusted proxy IPs (comma-separated, bypasses CSRF)
 
-# CSRF Protection for POST authentication
-WEBSSH2_SSO_CSRF_PROTECTION=false
-
-# Trusted proxy IPs (comma-separated, bypasses CSRF)
-WEBSSH2_SSO_TRUSTED_PROXIES=10.0.0.1,192.168.1.100
-
-# Header mapping for SSO credentials
-WEBSSH2_SSO_HEADER_USERNAME=x-apm-username
-WEBSSH2_SSO_HEADER_PASSWORD=x-apm-password
-WEBSSH2_SSO_HEADER_SESSION=x-apm-session
+# Header Mapping for SSO Credentials
+WEBSSH2_SSO_HEADER_USERNAME=x-apm-username   # HTTP header for SSO username
+WEBSSH2_SSO_HEADER_PASSWORD=x-apm-password   # HTTP header for SSO password
+WEBSSH2_SSO_HEADER_SESSION=x-apm-session     # HTTP header for SSO session
 ```
 
-For the full catalog of environment variables, see the upstream [WebSSH2 configuration reference](https://github.com/billchurch/webssh2/blob/newmain/DOCS/configuration/ENVIRONMENT-VARIABLES.md) and tailor values in [`.env.example`](.env.example).
+### WebSSH2 Logging Configuration
+
+```bash
+# General Logging
+WEBSSH2_LOGGING_LEVEL=info               # Minimum log level: debug, info, warn, error (default: info)
+WEBSSH2_LOGGING_STDOUT_ENABLED=true      # Enable logging to stdout (default: true)
+WEBSSH2_LOGGING_STDOUT_MIN_LEVEL=        # Minimum stdout log level (inherits from LOGGING_LEVEL)
+
+# Log Sampling (optional - for high-volume environments)
+WEBSSH2_LOGGING_SAMPLING_DEFAULT_RATE=   # Default sampling rate 0-1 (e.g., 0.1 = 10%)
+WEBSSH2_LOGGING_SAMPLING_RULES=          # JSON array: [{"target": "event-name", "sampleRate": 0.1}]
+
+# Rate Limiting (optional)
+WEBSSH2_LOGGING_RATE_LIMIT_RULES=        # JSON array: [{"target": "*", "limit": 100, "intervalMs": 60000}]
+
+# Debug Logging
+DEBUG=                                   # Debug namespace filter (e.g., webssh2:*, socket,ssh,config)
+```
+
+### Syslog Configuration
+
+```bash
+# Syslog Transport
+WEBSSH2_LOGGING_SYSLOG_ENABLED=false     # Enable syslog logging (default: false)
+WEBSSH2_LOGGING_SYSLOG_HOST=             # Syslog server hostname (required if enabled)
+WEBSSH2_LOGGING_SYSLOG_PORT=             # Syslog server port (required if enabled)
+WEBSSH2_LOGGING_SYSLOG_APP_NAME=webssh2  # Application name for syslog (default: webssh2)
+WEBSSH2_LOGGING_SYSLOG_ENTERPRISE_ID=    # Enterprise ID for structured syslog
+WEBSSH2_LOGGING_SYSLOG_BUFFER_SIZE=      # Buffer size for syslog messages
+WEBSSH2_LOGGING_SYSLOG_FLUSH_INTERVAL_MS= # Flush interval in milliseconds
+WEBSSH2_LOGGING_SYSLOG_INCLUDE_JSON=     # Include JSON structured data in syslog
+
+# Syslog TLS (for secure syslog transport)
+WEBSSH2_LOGGING_SYSLOG_TLS_ENABLED=false           # Enable TLS for syslog
+WEBSSH2_LOGGING_SYSLOG_TLS_CA_FILE=                # CA certificate file for syslog TLS
+WEBSSH2_LOGGING_SYSLOG_TLS_CERT_FILE=              # Client certificate file
+WEBSSH2_LOGGING_SYSLOG_TLS_KEY_FILE=               # Client key file
+WEBSSH2_LOGGING_SYSLOG_TLS_REJECT_UNAUTHORIZED=    # Reject unauthorized syslog TLS certs
+```
+
+### Environment Variable Parsing Notes
+
+**Array Variables** accept either format:
+- Comma-separated: `value1,value2,value3`
+- JSON array: `["value1","value2","value3"]`
+
+**Boolean Variables** accept:
+- `true` or `1` for true
+- Any other value for false
+
+For additional details, see the upstream [WebSSH2 configuration reference](https://github.com/billchurch/webssh2/blob/main/DOCS/configuration/ENVIRONMENT-VARIABLES.md).
 
 ## 🚀 Quick Start Examples
 
