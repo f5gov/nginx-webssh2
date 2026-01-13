@@ -18,6 +18,12 @@ mkdir -p /etc/nginx/certs
 chown nginx:nginx /etc/nginx/certs
 chmod 755 /etc/nginx/certs
 
+# Create default mTLS configuration early to prevent NGINX config failures
+# This will be overwritten later if MTLS_ENABLED=true
+mkdir -p /etc/nginx/snippets
+echo "# mTLS disabled" > /etc/nginx/snippets/mtls.conf
+echo "[TLS] Created default mTLS configuration"
+
 # Function to validate certificate files
 validate_cert() {
     local cert_file=$1
@@ -149,9 +155,19 @@ fi
 # Configure mTLS if enabled
 if [[ "${MTLS_ENABLED}" == "true" ]]; then
     echo "[TLS] Configuring mutual TLS (mTLS)..."
-    
-    # Create mTLS configuration
-    cat > /etc/nginx/snippets/mtls.conf << EOF
+
+    # Validate CA certificate before creating config
+    if [[ ! -f "${MTLS_CA_CERT}" ]]; then
+        echo "[TLS] ERROR: mTLS CA certificate not found: ${MTLS_CA_CERT}"
+        echo "[TLS] Disabling mTLS and continuing with default configuration"
+        echo "# mTLS disabled (CA cert not found)" > /etc/nginx/snippets/mtls.conf
+    elif ! openssl x509 -in "${MTLS_CA_CERT}" -noout >/dev/null 2>&1; then
+        echo "[TLS] ERROR: Invalid mTLS CA certificate format"
+        echo "[TLS] Disabling mTLS and continuing with default configuration"
+        echo "# mTLS disabled (invalid CA cert)" > /etc/nginx/snippets/mtls.conf
+    else
+        # Create mTLS configuration
+        cat > /etc/nginx/snippets/mtls.conf << EOF
 # mTLS Configuration
 ssl_verify_client ${MTLS_OPTIONAL:+optional};
 ssl_client_certificate ${MTLS_CA_CERT};
@@ -166,25 +182,16 @@ proxy_set_header X-SSL-Client-Fingerprint \$ssl_client_fingerprint;
 # Optional: CRL checking
 ${MTLS_CRL_PATH:+ssl_crl ${MTLS_CRL_PATH};}
 EOF
-    
-    # Validate CA certificate
-    if [[ ! -f "${MTLS_CA_CERT}" ]]; then
-        echo "[TLS] ERROR: mTLS CA certificate not found: ${MTLS_CA_CERT}"
-        exit 1
+
+        chown nginx:nginx "${MTLS_CA_CERT}"
+        chmod 644 "${MTLS_CA_CERT}"
+
+        echo "[TLS] ✓ mTLS configuration completed"
     fi
-    
-    if ! openssl x509 -in "${MTLS_CA_CERT}" -noout >/dev/null 2>&1; then
-        echo "[TLS] ERROR: Invalid mTLS CA certificate format"
-        exit 1
-    fi
-    
-    chown nginx:nginx "${MTLS_CA_CERT}"
-    chmod 644 "${MTLS_CA_CERT}"
-    
-    echo "[TLS] ✓ mTLS configuration completed"
 else
-    # Create empty mTLS configuration
+    # Ensure mTLS configuration exists with disabled state
     echo "# mTLS disabled" > /etc/nginx/snippets/mtls.conf
+    echo "[TLS] mTLS disabled"
 fi
 
 echo "[TLS] TLS setup completed successfully"
