@@ -928,7 +928,7 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 - **Issues**: GitHub Issues
 - **Discussions**: GitHub Discussions  
-- **Security**: <billh@f5.com>
+- **Security**: <bill@f5.com>
 
 ---
 
