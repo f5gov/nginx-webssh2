@@ -99,11 +99,14 @@ RUN curl -fsSL https://rpm.nodesource.com/setup_22.x | bash - && \
 
 # Install s6-overlay for process supervision
 # Determine architecture and download appropriate binary
+# Note: ARM64 uses different tar flags to work around QEMU emulation issues in CI
 RUN ARCH=$(uname -m) && \
     if [ "$ARCH" = "x86_64" ]; then \
         S6_ARCH="x86_64"; \
+        TAR_OPTS="-Jxpf"; \
     elif [ "$ARCH" = "aarch64" ]; then \
         S6_ARCH="aarch64"; \
+        TAR_OPTS="-Jxf --no-same-owner"; \
     else \
         echo "Unsupported architecture: $ARCH" && exit 1; \
     fi && \
@@ -111,8 +114,8 @@ RUN ARCH=$(uname -m) && \
         https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-noarch.tar.xz && \
     curl -L -o /tmp/s6-overlay-${S6_ARCH}.tar.xz \
         https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-${S6_ARCH}.tar.xz && \
-    tar -C / -Jxpf /tmp/s6-overlay-noarch.tar.xz && \
-    tar -C / -Jxpf /tmp/s6-overlay-${S6_ARCH}.tar.xz && \
+    tar -C / $TAR_OPTS /tmp/s6-overlay-noarch.tar.xz && \
+    tar -C / $TAR_OPTS /tmp/s6-overlay-${S6_ARCH}.tar.xz && \
     rm /tmp/s6-overlay-*.tar.xz
 
 # Create users, groups, and directories
