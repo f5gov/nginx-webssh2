@@ -106,7 +106,7 @@ RUN ARCH=$(uname -m) && \
         TAR_OPTS="-Jxpf"; \
     elif [ "$ARCH" = "aarch64" ]; then \
         S6_ARCH="aarch64"; \
-        TAR_OPTS="-Jxf --no-same-owner"; \
+        TAR_OPTS="-Jx --no-same-owner -f"; \
     else \
         echo "Unsupported architecture: $ARCH" && exit 1; \
     fi && \
