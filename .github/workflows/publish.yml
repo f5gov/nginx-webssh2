@@ -111,7 +111,7 @@ jobs:
           labels: |
             org.opencontainers.image.title=NGINX WebSSH2
             org.opencontainers.image.description=Production-ready NGINX + WebSSH2 container with FIPS 140-2 support
-            org.opencontainers.image.vendor=f5gov
+            org.opencontainers.image.vendor=F5GovSolutions
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
             org.opencontainers.image.documentation=${{ github.server_url }}/${{ github.repository }}/blob/main/README.md
             org.opencontainers.image.licenses=MIT
@@ -156,16 +156,16 @@ jobs:
 
           ### GitHub Container Registry
           \`\`\`bash
-          docker pull ghcr.io/f5gov/nginx-webssh2:latest
-          docker pull ghcr.io/f5gov/nginx-webssh2:${SEMVER_FULL}
-          docker pull ghcr.io/f5gov/nginx-webssh2:${SEMVER_MINOR}
-          docker pull ghcr.io/f5gov/nginx-webssh2:${SEMVER_MAJOR}
+          docker pull ghcr.io/F5GovSolutions/nginx-webssh2:latest
+          docker pull ghcr.io/F5GovSolutions/nginx-webssh2:${SEMVER_FULL}
+          docker pull ghcr.io/F5GovSolutions/nginx-webssh2:${SEMVER_MINOR}
+          docker pull ghcr.io/F5GovSolutions/nginx-webssh2:${SEMVER_MAJOR}
           \`\`\`
 
           **Image Digest:** \`${IMAGE_DIGEST}\`
 
           **Links:**
-          - [GitHub Container Registry](https://github.com/f5gov/nginx-webssh2/pkgs/container/nginx-webssh2)
+          - [GitHub Container Registry](https://github.com/F5GovSolutions/nginx-webssh2/pkgs/container/nginx-webssh2)
           "
 
           # Append Docker section to release notes

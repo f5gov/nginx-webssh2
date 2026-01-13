@@ -242,7 +242,7 @@ If `bats-assert` is not installed, fallback implementations are provided:
     -p ${TEST_PORT}:443 \
     --name "${TEST_CONTAINER_PREFIX}-${BATS_TEST_NUMBER}" \
     -e WEBSSH2_SESSION_SECRET="${TEST_SESSION_SECRET}" \
-    ghcr.io/f5gov/nginx-webssh2:latest
+    ghcr.io/F5GovSolutions/nginx-webssh2:latest
 
   # Wait for startup
   sleep 10
@@ -343,7 +343,7 @@ docker info
 **Solution**:
 ```bash
 # Pull the image manually
-docker pull ghcr.io/f5gov/nginx-webssh2:latest
+docker pull ghcr.io/F5GovSolutions/nginx-webssh2:latest
 
 # Or run tests with automatic pull
 ./run_tests.sh

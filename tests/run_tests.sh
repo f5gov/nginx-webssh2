@@ -72,7 +72,7 @@ check_prerequisites() {
 
 # Pull the latest image
 pull_image() {
-  local image="ghcr.io/f5gov/nginx-webssh2:latest"
+  local image="ghcr.io/F5GovSolutions/nginx-webssh2:latest"
 
   print_info "Pulling container image: ${image}"
 

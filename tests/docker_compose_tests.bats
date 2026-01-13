@@ -36,7 +36,7 @@ version: '3.8'
 
 services:
   nginx-webssh2:
-    image: ghcr.io/f5gov/nginx-webssh2:latest
+    image: ghcr.io/F5GovSolutions/nginx-webssh2:latest
     ports:
       - "8443:443"
     environment:
@@ -77,7 +77,7 @@ version: '3.8'
 
 services:
   nginx-webssh2:
-    image: ghcr.io/f5gov/nginx-webssh2:latest
+    image: ghcr.io/F5GovSolutions/nginx-webssh2:latest
     ports:
       - "8443:443"
     environment:
@@ -109,7 +109,7 @@ version: '3.8'
 
 services:
   nginx-webssh2:
-    image: ghcr.io/f5gov/nginx-webssh2:latest
+    image: ghcr.io/F5GovSolutions/nginx-webssh2:latest
     ports:
       - "8443:443"
     environment:
@@ -138,7 +138,7 @@ version: '3.8'
 
 services:
   nginx-webssh2:
-    image: ghcr.io/f5gov/nginx-webssh2:latest
+    image: ghcr.io/F5GovSolutions/nginx-webssh2:latest
     ports:
       - "8443:443"
     environment:
@@ -161,7 +161,7 @@ version: '3.8'
 
 services:
   nginx-webssh2:
-    image: ghcr.io/f5gov/nginx-webssh2:latest
+    image: ghcr.io/F5GovSolutions/nginx-webssh2:latest
     ports:
       - "8443:443"
     environment:
@@ -195,7 +195,7 @@ version: '3.8'
 
 services:
   nginx-webssh2:
-    image: ghcr.io/f5gov/nginx-webssh2:latest
+    image: ghcr.io/F5GovSolutions/nginx-webssh2:latest
     ports:
       - "8443:443"
     environment:
@@ -227,7 +227,7 @@ version: '3.8'
 
 services:
   nginx-webssh2:
-    image: ghcr.io/f5gov/nginx-webssh2:latest
+    image: ghcr.io/F5GovSolutions/nginx-webssh2:latest
     ports:
       - "8443:443"
     environment:
@@ -256,7 +256,7 @@ version: '3.8'
 
 services:
   nginx-webssh2:
-    image: ghcr.io/f5gov/nginx-webssh2:latest
+    image: ghcr.io/F5GovSolutions/nginx-webssh2:latest
     ports:
       - "8443:443"
     environment:
@@ -282,7 +282,7 @@ version: '3.8'
 
 services:
   nginx-webssh2:
-    image: ghcr.io/f5gov/nginx-webssh2:latest
+    image: ghcr.io/F5GovSolutions/nginx-webssh2:latest
     ports:
       - "8443:443"
     environment:
