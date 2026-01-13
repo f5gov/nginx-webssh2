@@ -11,7 +11,7 @@ This document contains detailed build instructions for the nginx-webssh2 contain
 ## Clone Repository & Fetch WebSSH2
 
 ```bash
-git clone https://github.com/f5gov/nginx-webssh2.git
+git clone https://github.com/F5GovSolutions/nginx-webssh2.git
 cd nginx-webssh2
 
 # Download the WebSSH2 release artifact referenced in WEBSSH2_VERSION

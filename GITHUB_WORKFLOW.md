@@ -18,7 +18,7 @@ The workflows trigger on:
 ### Image Location
 
 ```bash
-ghcr.io/f5gov/nginx-webssh2
+ghcr.io/F5GovSolutions/nginx-webssh2
 ```
 
 ### Available Tags
@@ -39,7 +39,7 @@ Images are automatically built for:
 
 **IMPORTANT**: After the first workflow run, you need to make the package public:
 
-1. Go to: <https://github.com/orgs/f5gov/packages/container/nginx-webssh2/settings>
+1. Go to: <https://github.com/orgs/F5GovSolutions/packages/container/nginx-webssh2/settings>
 2. Under "Danger Zone", click "Change visibility"
 3. Select "Public"
 4. Confirm the change
@@ -52,8 +52,8 @@ This allows users to pull images without authentication while keeping the reposi
 
 ```bash
 # No authentication required
-docker pull ghcr.io/f5gov/nginx-webssh2:latest
-docker pull ghcr.io/f5gov/nginx-webssh2:v1.0.0
+docker pull ghcr.io/F5GovSolutions/nginx-webssh2:latest
+docker pull ghcr.io/F5GovSolutions/nginx-webssh2:v1.0.0
 ```
 
 ### Private Access (before visibility change)
@@ -61,7 +61,7 @@ docker pull ghcr.io/f5gov/nginx-webssh2:v1.0.0
 ```bash
 # Login first
 echo $GITHUB_TOKEN | docker login ghcr.io -u USERNAME --password-stdin
-docker pull ghcr.io/f5gov/nginx-webssh2:latest
+docker pull ghcr.io/F5GovSolutions/nginx-webssh2:latest
 ```
 
 ## Triggering Builds
@@ -106,7 +106,7 @@ Security scanning is currently disabled in the publish workflow. Run Trivy or an
 
 ### Check Package Info
 
-Visit: <https://github.com/orgs/f5gov/packages/container/package/nginx-webssh2>
+Visit: <https://github.com/orgs/F5GovSolutions/packages/container/package/nginx-webssh2>
 
 This shows:
 
@@ -146,7 +146,7 @@ Common issues and solutions:
 Before pushing, test the build:
 
 ```bash
-git clone https://github.com/f5gov/nginx-webssh2.git
+git clone https://github.com/F5GovSolutions/nginx-webssh2.git
 cd nginx-webssh2
 
 # Pull the WebSSH2 artifact referenced in WEBSSH2_VERSION

@@ -20,7 +20,7 @@ teardown() {
     -p ${TEST_PORT}:443 \
     --name "${TEST_CONTAINER_NAME}" \
     -e WEBSSH2_SESSION_SECRET="${TEST_SESSION_SECRET}" \
-    ghcr.io/f5gov/nginx-webssh2:latest
+    ghcr.io/F5GovSolutions/nginx-webssh2:latest
 
   assert_success
 
@@ -34,7 +34,7 @@ teardown() {
 }
 
 @test "Smoke: Image has correct labels" {
-  run docker inspect ghcr.io/f5gov/nginx-webssh2:latest --format '{{json .Config.Labels}}'
+  run docker inspect ghcr.io/F5GovSolutions/nginx-webssh2:latest --format '{{json .Config.Labels}}'
   assert_success
   assert_output --partial "org.opencontainers"
 }
@@ -44,7 +44,7 @@ teardown() {
     -p ${TEST_PORT}:443 \
     --name "${TEST_CONTAINER_NAME}" \
     -e WEBSSH2_SESSION_SECRET="${TEST_SESSION_SECRET}" \
-    ghcr.io/f5gov/nginx-webssh2:latest
+    ghcr.io/F5GovSolutions/nginx-webssh2:latest
 
   sleep 8
 
@@ -59,7 +59,7 @@ teardown() {
     -p ${TEST_PORT}:443 \
     --name "${TEST_CONTAINER_NAME}" \
     -e WEBSSH2_SESSION_SECRET="${TEST_SESSION_SECRET}" \
-    ghcr.io/f5gov/nginx-webssh2:latest
+    ghcr.io/F5GovSolutions/nginx-webssh2:latest
 
   sleep 8
 
@@ -69,7 +69,7 @@ teardown() {
 }
 
 @test "Smoke: Container has correct base image" {
-  run docker inspect ghcr.io/f5gov/nginx-webssh2:latest --format '{{.Os}}/{{.Architecture}}'
+  run docker inspect ghcr.io/F5GovSolutions/nginx-webssh2:latest --format '{{.Os}}/{{.Architecture}}'
   assert_success
   # Should be linux/amd64 or linux/arm64
   [[ "$output" =~ linux/(amd64|arm64) ]]

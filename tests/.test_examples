@@ -53,7 +53,7 @@ bats tests/docker_compose_tests.bats -f "Docker Compose"
 # Test basic deployment (should work)
 docker run -d -p 8443:443 --name test-webssh2 \
   -e WEBSSH2_SESSION_SECRET="$(openssl rand -base64 32)" \
-  ghcr.io/f5gov/nginx-webssh2:latest
+  ghcr.io/F5GovSolutions/nginx-webssh2:latest
 
 # Wait and check health
 sleep 10
@@ -61,7 +61,7 @@ curl -k https://localhost:8443/health
 
 # Test without session secret (should fail)
 docker run -d -p 8444:443 --name test-webssh2-fail \
-  ghcr.io/f5gov/nginx-webssh2:latest
+  ghcr.io/F5GovSolutions/nginx-webssh2:latest
 
 # Check logs for error
 sleep 5
@@ -106,7 +106,7 @@ bats --jobs 4 tests/*.bats
 # ==============================================================================
 
 # GitHub Actions style
-docker pull ghcr.io/f5gov/nginx-webssh2:latest
+docker pull ghcr.io/F5GovSolutions/nginx-webssh2:latest
 cd tests && ./run_tests.sh --skip-pull
 
 # With test results output
@@ -121,21 +121,21 @@ docker run -d -p 8443:443 --name test-fips \
   -e WEBSSH2_SESSION_SECRET="$(openssl rand -base64 32)" \
   -e FIPS_MODE=enabled \
   -e FIPS_CHECK=false \
-  ghcr.io/f5gov/nginx-webssh2:latest
+  ghcr.io/F5GovSolutions/nginx-webssh2:latest
 
 # Test with custom SSH target
 docker run -d -p 8443:443 --name test-ssh-target \
   -e WEBSSH2_SESSION_SECRET="$(openssl rand -base64 32)" \
   -e WEBSSH2_SSH_HOST=ssh.example.com \
   -e WEBSSH2_SSH_PORT=22 \
-  ghcr.io/f5gov/nginx-webssh2:latest
+  ghcr.io/F5GovSolutions/nginx-webssh2:latest
 
 # Test with debug logging
 docker run -d -p 8443:443 --name test-debug \
   -e WEBSSH2_SESSION_SECRET="$(openssl rand -base64 32)" \
   -e DEBUG="webssh2:*" \
   -e NGINX_ACCESS_LOG=on \
-  ghcr.io/f5gov/nginx-webssh2:latest
+  ghcr.io/F5GovSolutions/nginx-webssh2:latest
 
 # Test with provided certificates
 mkdir -p /tmp/test-certs
@@ -148,7 +148,7 @@ docker run -d -p 8443:443 --name test-certs \
   -e WEBSSH2_SESSION_SECRET="$(openssl rand -base64 32)" \
   -e TLS_MODE=provided \
   -v /tmp/test-certs:/etc/nginx/certs:ro \
-  ghcr.io/f5gov/nginx-webssh2:latest
+  ghcr.io/F5GovSolutions/nginx-webssh2:latest
 
 # ==============================================================================
 # Load Testing

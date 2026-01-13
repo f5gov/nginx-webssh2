@@ -223,7 +223,7 @@ docker ps -a | grep test
 # Start container manually
 docker run -d -p 8443:443 --name manual-test \
   -e WEBSSH2_SESSION_SECRET="$(openssl rand -base64 32)" \
-  ghcr.io/f5gov/nginx-webssh2:latest
+  ghcr.io/F5GovSolutions/nginx-webssh2:latest
 
 # Wait and test
 sleep 10

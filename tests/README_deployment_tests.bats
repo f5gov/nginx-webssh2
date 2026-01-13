@@ -26,7 +26,7 @@ teardown() {
     -p ${TEST_PORT}:443 \
     --name "${TEST_CONTAINER_PREFIX}-${BATS_TEST_NUMBER}" \
     -e WEBSSH2_SESSION_SECRET="${TEST_SESSION_SECRET}" \
-    ghcr.io/f5gov/nginx-webssh2:latest
+    ghcr.io/F5GovSolutions/nginx-webssh2:latest
 
   # Wait for container to start
   sleep 10
@@ -42,7 +42,7 @@ teardown() {
     -p ${TEST_PORT}:443 \
     --name "${TEST_CONTAINER_PREFIX}-${BATS_TEST_NUMBER}" \
     -e WEBSSH2_SESSION_SECRET="${TEST_SESSION_SECRET}" \
-    ghcr.io/f5gov/nginx-webssh2:latest
+    ghcr.io/F5GovSolutions/nginx-webssh2:latest
 
   # Wait for services to be ready
   sleep 15
@@ -59,7 +59,7 @@ teardown() {
     -e WEBSSH2_SESSION_SECRET="${TEST_SESSION_SECRET}" \
     -e FIPS_MODE=disabled \
     -e FIPS_CHECK=false \
-    ghcr.io/f5gov/nginx-webssh2:latest
+    ghcr.io/F5GovSolutions/nginx-webssh2:latest
 
   sleep 10
 
@@ -78,7 +78,7 @@ teardown() {
     --name "${TEST_CONTAINER_PREFIX}-${BATS_TEST_NUMBER}" \
     -e WEBSSH2_SESSION_SECRET="${TEST_SESSION_SECRET}" \
     -e TLS_MODE=self-signed \
-    ghcr.io/f5gov/nginx-webssh2:latest
+    ghcr.io/F5GovSolutions/nginx-webssh2:latest
 
   sleep 10
 
@@ -99,7 +99,7 @@ teardown() {
     -e TLS_MODE=self-signed \
     -e TLS_CERT_CN=test.localhost \
     -e TLS_CERT_SAN="test.localhost,localhost,127.0.0.1" \
-    ghcr.io/f5gov/nginx-webssh2:latest
+    ghcr.io/F5GovSolutions/nginx-webssh2:latest
 
   sleep 10
 
@@ -120,7 +120,7 @@ teardown() {
     -e WEBSSH2_SESSION_SECRET="${TEST_SESSION_SECRET}" \
     -e WEBSSH2_SSH_HOST=ssh.example.com \
     -e WEBSSH2_SSH_PORT=22 \
-    ghcr.io/f5gov/nginx-webssh2:latest
+    ghcr.io/F5GovSolutions/nginx-webssh2:latest
 
   sleep 10
 
@@ -137,7 +137,7 @@ teardown() {
     -e WEBSSH2_SESSION_SECRET="${TEST_SESSION_SECRET}" \
     -e FIPS_MODE=enabled \
     -e FIPS_CHECK=false \
-    ghcr.io/f5gov/nginx-webssh2:latest
+    ghcr.io/F5GovSolutions/nginx-webssh2:latest
 
   sleep 10
 
@@ -154,7 +154,7 @@ teardown() {
     -e NGINX_RATE_LIMIT=10r/s \
     -e NGINX_RATE_LIMIT_BURST=20 \
     -e NGINX_CONN_LIMIT=100 \
-    ghcr.io/f5gov/nginx-webssh2:latest
+    ghcr.io/F5GovSolutions/nginx-webssh2:latest
 
   sleep 10
 
@@ -172,7 +172,7 @@ teardown() {
     -p ${TEST_PORT}:443 \
     --name "${TEST_CONTAINER_PREFIX}-${BATS_TEST_NUMBER}" \
     -e WEBSSH2_SESSION_SECRET="${TEST_SESSION_SECRET}" \
-    ghcr.io/f5gov/nginx-webssh2:latest
+    ghcr.io/F5GovSolutions/nginx-webssh2:latest
 
   sleep 10
 
@@ -194,7 +194,7 @@ teardown() {
     --name "${TEST_CONTAINER_PREFIX}-${BATS_TEST_NUMBER}" \
     -e WEBSSH2_SESSION_SECRET="${TEST_SESSION_SECRET}" \
     -e NGINX_ACCESS_LOG=on \
-    ghcr.io/f5gov/nginx-webssh2:latest
+    ghcr.io/F5GovSolutions/nginx-webssh2:latest
 
   sleep 10
 
@@ -215,7 +215,7 @@ teardown() {
     --name "${TEST_CONTAINER_PREFIX}-${BATS_TEST_NUMBER}" \
     -e WEBSSH2_SESSION_SECRET="${TEST_SESSION_SECRET}" \
     -e DEBUG="webssh2:*" \
-    ghcr.io/f5gov/nginx-webssh2:latest
+    ghcr.io/F5GovSolutions/nginx-webssh2:latest
 
   sleep 10
 
@@ -236,7 +236,7 @@ teardown() {
     -p ${TEST_PORT}:443 \
     --name "${TEST_CONTAINER_PREFIX}-${BATS_TEST_NUMBER}" \
     -e WEBSSH2_SESSION_SECRET="${TEST_SESSION_SECRET}" \
-    ghcr.io/f5gov/nginx-webssh2:latest
+    ghcr.io/F5GovSolutions/nginx-webssh2:latest
 
   sleep 10
 
@@ -267,7 +267,7 @@ teardown() {
     -p ${TEST_PORT}:443 \
     --name "${TEST_CONTAINER_PREFIX}-${BATS_TEST_NUMBER}" \
     -e WEBSSH2_SESSION_SECRET="${TEST_SESSION_SECRET}" \
-    ghcr.io/f5gov/nginx-webssh2:latest
+    ghcr.io/F5GovSolutions/nginx-webssh2:latest
 
   sleep 10
 
@@ -281,7 +281,7 @@ teardown() {
     -p ${TEST_PORT}:443 \
     --name "${TEST_CONTAINER_PREFIX}-${BATS_TEST_NUMBER}" \
     -e WEBSSH2_SESSION_SECRET="${TEST_SESSION_SECRET}" \
-    ghcr.io/f5gov/nginx-webssh2:latest
+    ghcr.io/F5GovSolutions/nginx-webssh2:latest
 
   sleep 10
 
@@ -295,7 +295,7 @@ teardown() {
     -p ${TEST_PORT}:443 \
     --name "${TEST_CONTAINER_PREFIX}-${BATS_TEST_NUMBER}" \
     -e WEBSSH2_SESSION_SECRET="${TEST_SESSION_SECRET}" \
-    ghcr.io/f5gov/nginx-webssh2:latest
+    ghcr.io/F5GovSolutions/nginx-webssh2:latest
 
   sleep 10
 
@@ -313,7 +313,7 @@ teardown() {
     -p ${TEST_PORT}:443 \
     --name "${TEST_CONTAINER_PREFIX}-${BATS_TEST_NUMBER}" \
     -e WEBSSH2_SESSION_SECRET="${TEST_SESSION_SECRET}" \
-    ghcr.io/f5gov/nginx-webssh2:latest
+    ghcr.io/F5GovSolutions/nginx-webssh2:latest
 
   sleep 10
 
@@ -332,7 +332,7 @@ teardown() {
     -p ${TEST_PORT}:443 \
     --name "${TEST_CONTAINER_PREFIX}-${BATS_TEST_NUMBER}" \
     -e WEBSSH2_SESSION_SECRET="${TEST_SESSION_SECRET}" \
-    ghcr.io/f5gov/nginx-webssh2:latest
+    ghcr.io/F5GovSolutions/nginx-webssh2:latest
 
   sleep 10
 
@@ -347,7 +347,7 @@ teardown() {
     -p ${TEST_PORT}:443 \
     --name "${TEST_CONTAINER_PREFIX}-${BATS_TEST_NUMBER}" \
     -e WEBSSH2_SESSION_SECRET="${TEST_SESSION_SECRET}" \
-    ghcr.io/f5gov/nginx-webssh2:latest
+    ghcr.io/F5GovSolutions/nginx-webssh2:latest
 
   sleep 10
 
@@ -370,7 +370,7 @@ teardown() {
     -p ${TEST_PORT}:443 \
     --name "${TEST_CONTAINER_PREFIX}-${BATS_TEST_NUMBER}" \
     -e WEBSSH2_SESSION_SECRET="${PERSISTENT_SECRET}" \
-    ghcr.io/f5gov/nginx-webssh2:latest
+    ghcr.io/F5GovSolutions/nginx-webssh2:latest
 
   sleep 10
 
@@ -393,12 +393,12 @@ teardown() {
 # ==============================================================================
 
 @test "README Example: Latest tag is available" {
-  run docker pull ghcr.io/f5gov/nginx-webssh2:latest
+  run docker pull ghcr.io/F5GovSolutions/nginx-webssh2:latest
   assert_success
 }
 
 @test "README Example: Image metadata includes labels" {
-  run docker inspect ghcr.io/f5gov/nginx-webssh2:latest --format '{{json .Config.Labels}}'
+  run docker inspect ghcr.io/F5GovSolutions/nginx-webssh2:latest --format '{{json .Config.Labels}}'
   assert_success
   assert_output --partial "org.opencontainers"
 }
