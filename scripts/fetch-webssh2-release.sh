@@ -29,7 +29,7 @@ fi
 
 VERSION="$1"
 DEST_DIR="${2:-vendor/webssh2}"
-REPO="${WEBSSH2_REPO:-billchurch/webssh2}"
+REPO="${WEBSSH2_REPO:-F5GovSolutions/webssh2}"
 TAG="${WEBSSH2_TAG:-webssh2-server-v${VERSION}}"
 ASSET_NAME="webssh2-${VERSION}.tar.gz"
 ASSET_URL="https://github.com/${REPO}/releases/download/${TAG}/${ASSET_NAME}"
