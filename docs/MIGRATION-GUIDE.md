@@ -8,7 +8,7 @@ If you're using the nginx-webssh2 container and want to upgrade to the latest ve
 
 ✅ **If you're using Docker Hub or GitHub Container Registry images**, just pull the latest version:
 ```bash
-docker pull ghcr.io/F5GovSolutions/nginx-webssh2:latest
+docker pull ghcr.io/f5gov/nginx-webssh2:latest
 ```
 
 All your existing configurations will continue to work without changes.
@@ -86,8 +86,8 @@ docker run -e FIPS_CHECK=false ...
 ## Need Help?
 
 - **Detailed Technical Information**: See [docs/UBI9-upgrade.md](UBI9-upgrade.md)
-- **Issues**: Report at [GitHub Issues](https://github.com/F5GovSolutions/nginx-webssh2/issues)
-- **Questions**: Ask in [GitHub Discussions](https://github.com/F5GovSolutions/nginx-webssh2/discussions)
+- **Issues**: Report at [GitHub Issues](https://github.com/f5gov/nginx-webssh2/issues)
+- **Questions**: Ask in [GitHub Discussions](https://github.com/f5gov/nginx-webssh2/discussions)
 
 ## Summary
 
