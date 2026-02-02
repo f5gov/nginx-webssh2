@@ -813,7 +813,7 @@ docker exec nginx-webssh2 tail -f /var/log/nginx/error.log
 docker exec nginx-webssh2 tail -f /var/log/nginx/access.log
 
 # WebSSH2 logs (debug output when DEBUG is set)
-docker exec nginx-webssh2 tail -f /var/log/webssh2/webssh2.log
+docker exec nginx-webssh2 tail -f /var/log/webssh2/current
 ```
 
 #### Logging Configuration
