@@ -82,6 +82,7 @@ jobs:
         run: ./scripts/fetch-webssh2-release.sh "${{ steps.context.outputs.version }}"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          WEBSSH2_REPO: ${{ vars.WEBSSH2_REPO }}
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
