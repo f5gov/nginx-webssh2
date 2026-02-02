@@ -137,8 +137,10 @@ COPY --from=builder --chown=webssh2:webssh2 /build/manifest.json /usr/src/webssh
 # Copy s6-overlay configuration
 COPY ./rootfs/ /
 
-# Set executable permissions on scripts and create environment export script
-RUN find /etc/cont-init.d -name "*.sh" -exec chmod +x {} \; && \
+# Ensure /etc has correct permissions (may be restricted from COPY depending on host)
+# and set executable permissions on scripts
+RUN chmod 755 /etc && \
+    find /etc/cont-init.d -name "*.sh" -exec chmod +x {} \; && \
     find /etc/s6-overlay -name "run" -exec chmod +x {} \; && \
     find /usr/local/bin -name "*.sh" -exec chmod +x {} \; && \
     chmod +x /etc/cont-init.d/* /usr/local/bin/* && \

@@ -1,22 +1,7 @@
-#!/bin/bash
-
-# WebSSH2 service script for s6-overlay
+#!/command/execlineb -P
+foreground { /usr/local/bin/webssh2-setup.sh }
+s6-envdir /etc/s6-overlay/s6-rc.d/webssh2/env
 cd /usr/src/webssh2
-
-# Source environment variables created by initialization script
-if [[ -f /etc/webssh2-env ]]; then
-    source /etc/webssh2-env
-fi
-
-# Only enable debug logging if DEBUG env variable is provided
-# if [[ -z "${DEBUG}" ]]; then
-#     export DEBUG="webssh2:*"
-# fi
-
-# Create log file if it doesn't exist
-touch /var/log/webssh2/webssh2.log
-chown webssh2:webssh2 /var/log/webssh2/webssh2.log
-
-# Run as webssh2 user and redirect all output to log file
-# Using s6-setuidgid to switch user and tee to duplicate output
-exec s6-setuidgid webssh2 sh -c 'exec node dist/index.js 2>&1 | tee -a /var/log/webssh2/webssh2.log'
+s6-setuidgid webssh2
+fdmove -c 2 1
+/usr/bin/node dist/index.js
